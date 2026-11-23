@@ -1,14 +1,21 @@
 import { useId, useLayoutEffect, useState } from 'react'
-import { Area, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, XAxis, YAxis } from 'recharts'
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { TooltipContent, type TooltipRow } from '@ds/components/Tooltip'
-import { fmtM, type Model } from '../data/campaign'
+import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 import { ChartContainer, ChartTooltip, type ChartConfig } from './chart'
 import { signedM } from './copy'
 
-const HEIGHT = 300
-const Y_TICKS = [0, 12, 24, 36, 48, 60]
-const X_TICKS = ['Nov 3', 'Nov 10', 'Nov 17', 'Nov 24', 'Dec 1', 'Dec 8', 'Dec 14']
-const PLAN_LABEL_AT = 'Dec 1'
+const HEIGHT = 240
+// At the drawer's ~630px plot, ticks every two weeks (weekly ticks would crowd).
+const X_TICK_DAYS = [0, 14, 28, CAMPAIGN.flightDays - 1]
+const PLAN_LABEL_DAY = 28
+
+/** The guarantee always sits on a tick: quarters up to 125% (48M → 0, 12 … 60), halves when quarters aren't whole millions. */
+function yTicks(guarantee: number) {
+  const quarters = Number.isInteger(guarantee / 4)
+  const ticks = quarters ? [0, 1, 2, 3, 4, 5].map(i => (i * guarantee) / 4) : [0, guarantee / 2, guarantee]
+  return { ticks, max: guarantee * 1.25 }
+}
 
 const config: ChartConfig = {
   confirmed: { label: 'Confirmed', color: 'var(--ot-color-data-confirmed)' },
@@ -20,7 +27,9 @@ const config: ChartConfig = {
 type Row = Model['daily'][number] & { band?: [number, number] }
 
 // Chart adapter: forecast band widens from zero at the last data point to the model's range at flight end.
+// No forecast while the campaign is too new to project.
 function withBand(m: Model): Row[] {
+  if (m.status === 'too-early') return m.daily.map(({ projection: _, ...r }) => r)
   const first = m.daily.find(r => r.projection !== undefined)
   const last = m.daily[m.daily.length - 1]
   if (!first || last.projection === undefined) return m.daily
@@ -59,11 +68,17 @@ function DirectLabel({ viewBox, text, anchor = 'end', dx = 0, dy = 0, tone = 'se
 
 interface TickProps { x?: number; y?: number; payload?: { value: string } }
 
-// First and last x ticks are anchored inward so "Dec 14" is not clipped at the right edge.
-function XTick({ x = 0, y = 0, payload }: TickProps) {
+// The last x tick is anchored inward so the flight end date is not clipped at the right edge.
+function XTick({ x = 0, y = 0, payload, last }: TickProps & { last?: string }) {
   const value = payload?.value ?? ''
-  const anchor = value === X_TICKS[X_TICKS.length - 1] ? 'end' : 'middle'
+  const anchor = value === last ? 'end' : 'middle'
   return <text x={x} y={y} dy={12} textAnchor={anchor} className="chart__tick">{value}</text>
+}
+
+// Window highlight label, top-left inside the area.
+function AreaLabel({ viewBox, text }: { viewBox?: { x: number; y: number }; text: string }) {
+  if (!viewBox) return null
+  return <text x={viewBox.x + 4} y={viewBox.y + 14} className="chart__label chart__label--label chart__label--secondary">{text}</text>
 }
 
 function tooltipRows(r: Row, m: Model): TooltipRow[] {
@@ -95,16 +110,29 @@ function DeliveryTooltip({ active, payload, m }: { active?: boolean; payload?: A
   return <TooltipContent variant="light" title={row.label} rows={tooltipRows(row, m)} />
 }
 
-export function DeliveryChart({ m }: { m: Model }) {
+/** `area`: highlighted period window in model day indexes (§3.3), drawn under the series. */
+export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: number; x2: number } | null; areaLabel?: string }) {
   const hatchId = useId()
   const hatch = useHatchSize()
   const data = withBand(m)
   const lastConfirmed = [...data].reverse().find(r => r.confirmed !== undefined)
   const lastPrelim = m.prelim > 0 ? [...data].reverse().find(r => r.prelim !== undefined) : undefined
   const last = data[data.length - 1]
-  const planAt = data.find(r => r.label === PLAN_LABEL_AT)
-  const showToday = data.some(r => r.label === m.todayLabel)
+  const planAt = data[PLAN_LABEL_DAY]
+  const xTicks = X_TICK_DAYS.map(d => data[d].label)
+  const yAxis = yTicks(m.guarantee)
+  // Paused: a "Paused" line at the stop day replaces "Today".
+  const vLine = m.phase === 'paused' && m.def.stopDay !== undefined
+    ? { x: m.fmt(m.def.stopDay), text: 'Paused' }
+    : data.some(r => r.label === m.todayLabel) ? { x: m.todayLabel, text: 'Today' } : null
   const step = hatch.width + hatch.gap
+  // End-anchored data labels would clip at the left edge in the first days of a flight: read them to the right instead.
+  // Lifted clear of the plan line, which rises under a right-reading label.
+  const inward = (day: number) => (day < 10 ? { anchor: 'start' as const, dx: 6, dy: -28 } : {})
+  // Confirmed and preliminary ends a few days apart: lift the preliminary label above the confirmed one.
+  const prelimStacked = !!lastPrelim && !!lastConfirmed && lastPrelim.day - lastConfirmed.day <= 4
+  // Confirmed end just under the guarantee line with preliminary still to come: label inside the fill, below the line.
+  const confirmedBelow = !!lastPrelim && lastConfirmed?.confirmed !== undefined && m.guarantee - lastConfirmed.confirmed < m.guarantee * 0.2
 
   return (
     <ChartContainer config={config} height={HEIGHT}>
@@ -115,8 +143,11 @@ export function DeliveryChart({ m }: { m: Model }) {
           </pattern>
         </defs>
         <CartesianGrid vertical={false} stroke="var(--ot-color-chart-grid)" strokeWidth={1} />
-        <XAxis dataKey="label" ticks={X_TICKS} interval={0} tickLine={false} axisLine={{ stroke: 'var(--ot-color-chart-grid)' }} tick={<XTick />} />
-        <YAxis domain={[0, 60]} ticks={Y_TICKS} width={40} axisLine={false} tickLine={false} tickFormatter={(v: number) => (v === 0 ? '0' : `${v}M`)} tick={{ className: 'chart__tick' }} />
+        {area && (
+          <ReferenceArea x1={data[area.x1].label} x2={data[area.x2].label} fill="var(--ot-color-bg-subtle-hover)" fillOpacity={1} stroke="none" label={<AreaLabel text={areaLabel ?? ''} />} />
+        )}
+        <XAxis dataKey="label" ticks={xTicks} interval={0} tickLine={false} axisLine={{ stroke: 'var(--ot-color-chart-grid)' }} tick={<XTick last={xTicks[xTicks.length - 1]} />} />
+        <YAxis domain={[0, yAxis.max]} ticks={yAxis.ticks} width={40} axisLine={false} tickLine={false} tickFormatter={(v: number) => (v === 0 ? '0' : `${v}M`)} tick={{ className: 'chart__tick' }} />
         <ChartTooltip
           cursor={{ stroke: 'var(--ot-color-border-primary)', strokeWidth: 1 }}
           isAnimationActive={false}
@@ -124,21 +155,21 @@ export function DeliveryChart({ m }: { m: Model }) {
         />
 
         <Area dataKey="band" stroke="none" fill="var(--ot-color-bg-tertiary)" fillOpacity={1} activeDot={false} isAnimationActive={false} />
-        <ReferenceLine y={48} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text="Guarantee" anchor="start" dy={-6} />} />
+        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text="Guarantee" anchor="start" dy={-6} />} />
         <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} isAnimationActive={false} />
         <Area dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} fill="var(--ot-color-data-track)" fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Area dataKey="prelim" type="monotone" stroke="var(--color-prelim)" strokeWidth={2} strokeDasharray="2 3" strokeLinecap="round" fill={`url(#${hatchId})`} fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Line dataKey="projection" type="linear" stroke="var(--color-projection)" strokeWidth={1.5} strokeDasharray="6 4" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
-        {showToday && (
-          <ReferenceLine x={m.todayLabel} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text="Today" anchor="middle" dy={-8} tone="primary" />} />
+        {vLine && (
+          <ReferenceLine x={vLine.x} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={vLine.text} anchor="middle" dy={-8} tone="primary" />} />
         )}
 
         {planAt && <ReferenceDot x={planAt.label} y={planAt.plan} r={0} label={<DirectLabel text="Plan" anchor="middle" dy={16} />} />}
         {lastConfirmed?.confirmed !== undefined && (
-          <ReferenceDot x={lastConfirmed.label} y={lastConfirmed.confirmed} r={0} label={<DirectLabel text={`Confirmed ${fmtM(m.confirmed)}`} dy={-10} tone="primary" />} />
+          <ReferenceDot x={lastConfirmed.label} y={lastConfirmed.confirmed} r={0} label={<DirectLabel text={`Confirmed ${fmtM(m.confirmed)}`} dy={confirmedBelow ? 22 : -10} tone="primary" {...inward(lastConfirmed.day)} />} />
         )}
         {lastPrelim?.prelim !== undefined && (
-          <ReferenceDot x={lastPrelim.label} y={lastPrelim.prelim} r={0} label={<DirectLabel text={`Preliminary ${signedM(m.prelim)}`} dy={-10} tone="primary" />} />
+          <ReferenceDot x={lastPrelim.label} y={lastPrelim.prelim} r={0} label={<DirectLabel text={`Preliminary ${m.confirmed > 0 ? signedM(m.prelim) : fmtM(m.prelim)}`} dy={prelimStacked ? -26 : -10} tone="primary" {...inward(lastPrelim.day)} />} />
         )}
         {last.band && (
           <ReferenceDot x={last.label} y={last.band[1]} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={-8} type="body" />} />

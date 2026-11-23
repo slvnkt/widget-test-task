@@ -1,6 +1,6 @@
 import { NumberCell, Table, type TableColumn } from '@ds/components/Table'
 import { Tabs } from '@ds/components/Tabs'
-import { CAMPAIGN, fmtDay, type Model } from '../data/campaign'
+import { CAMPAIGN, type Model } from '../data/campaign'
 import { SOURCES } from './copy'
 
 type NetworkRow = Model['networks'][number]
@@ -14,7 +14,7 @@ const networkColumns: TableColumn<NetworkRow>[] = [
     header: 'Logs',
     sortable: true,
     sortValue: r => LOGS_RANK[r.status],
-    render: r => <span className={r.status === 'received' ? 'logs logs--received' : 'logs'}>{LOGS_TEXT[r.status]}</span>,
+    render: r => <span className={r.status === 'pending' ? 'logs' : 'logs logs--primary'}>{LOGS_TEXT[r.status]}</span>,
   },
   { key: 'through', header: 'Logs through' },
   { key: 'aired', header: 'Spots aired', align: 'right', sortable: true, render: r => <NumberCell value={`${r.aired} / ${r.scheduled}`} /> },
@@ -34,9 +34,10 @@ function sourceRows(m: Model): SourceRow[] {
   const confirmedThrough = m.daily.reduce((d, r) => (r.confirmed !== undefined ? r.day : d), -1)
   const prelimThrough = m.daily.reduce((d, r) => (r.prelim !== undefined ? r.day : d), -1)
   const rows: SourceRow[] = []
-  if (confirmedThrough >= 0) rows.push({ ...SOURCES.logs, covers: `${fmtDay(0)} – ${fmtDay(confirmedThrough)}` })
-  if (m.prelim > 0) rows.push({ ...SOURCES.acr, covers: `${fmtDay(confirmedThrough + 1)} – ${fmtDay(prelimThrough)}` })
-  if (m.phase === 'live' && m.def.today <= last) rows.push({ ...SOURCES.forecast, covers: `${fmtDay(Math.max(0, m.def.today))} – ${fmtDay(last)}` })
+  if (confirmedThrough >= 0) rows.push({ ...SOURCES.logs, covers: `${m.fmt(0)} – ${m.fmt(confirmedThrough)}` })
+  if (m.prelim > 0) rows.push({ ...SOURCES.acr, covers: `${m.fmt(confirmedThrough + 1)} – ${m.fmt(prelimThrough)}` })
+  else if (m.prelimThrough === null) rows.push({ ...SOURCES.acr, covers: 'Unavailable' })
+  if (m.phase === 'live' && m.status !== 'too-early' && m.def.today <= last) rows.push({ ...SOURCES.forecast, covers: `${m.fmt(Math.max(0, m.def.today))} – ${m.fmt(last)}` })
   return rows
 }
 
