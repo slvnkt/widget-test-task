@@ -1,5 +1,7 @@
+import { Info } from '@phosphor-icons/react'
 import { NumberCell, Table, type TableColumn } from '@ds/components/Table'
 import { Tabs } from '@ds/components/Tabs'
+import { Tooltip } from '@ds/components/Tooltip'
 import { CAMPAIGN, type Model } from '../data/campaign'
 import { SOURCES } from './copy'
 
@@ -23,11 +25,21 @@ const networkColumns: TableColumn<NetworkRow>[] = [
 
 interface SourceRow { source: string; covers: string; use: string; what: string }
 const sourceColumns: TableColumn<SourceRow>[] = [
-  // Short facts stay on one line; the explanation takes the rest of the width and wraps.
-  { key: 'source', header: 'Source', width: 192, render: r => <span className="nowrap">{r.source}</span> },
-  { key: 'covers', header: 'Covers', width: 128, render: r => <span className="nowrap">{r.covers}</span> },
-  { key: 'use', header: 'Use', width: 164, render: r => <span className="nowrap">{r.use}</span> },
-  { key: 'what', header: 'What it is', render: r => <span className="details__what">{r.what}</span> },
+  // One line per source; what the source is sits behind the info icon.
+  {
+    key: 'source',
+    header: 'Source',
+    render: r => (
+      <span className="source-cell">
+        {r.source}
+        <Tooltip text={r.what} placement="right">
+          <button type="button" className="source-cell__info" aria-label={`About ${r.source}`}><Info /></button>
+        </Tooltip>
+      </span>
+    ),
+  },
+  { key: 'covers', header: 'Covers', render: r => <span className="nowrap">{r.covers}</span> },
+  { key: 'use', header: 'Use', render: r => <span className="nowrap">{r.use}</span> },
 ]
 
 function sourceRows(m: Model): SourceRow[] {

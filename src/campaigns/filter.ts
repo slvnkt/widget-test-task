@@ -1,29 +1,29 @@
-// Status filter for the Campaigns card.
-import type { Campaign } from '../data/rows'
-import { STATUS_BADGE } from '../widget/copy'
+// Page-level Status filter: the STATUS vocabulary with live counts.
+import { createElement } from 'react'
+import type { SelectOption } from '@ds/components/Select'
+import type { Status } from '../data/campaign'
+import { CAMPAIGNS, type Campaign } from '../data/rows'
+import { STATUS, STATUS_ORDER } from './status'
+import { StatusIcon } from './StatusIcon'
 
-export type StatusFilter = 'all' | 'attention' | 'live' | 'scheduled' | 'ended' | 'paused'
+/** 'all' or a STATUS id. */
+export type StatusFilter = string
 
-export const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'attention', label: 'Needs attention' },
-  { value: 'live', label: 'Live' },
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'ended', label: 'Ended / Finalized' },
-  { value: 'paused', label: 'Paused' },
-]
+export const isStatusFilter = (v: string | null): v is StatusFilter => v === 'all' || STATUS_ORDER.some(s => STATUS[s].id === v)
 
-export const isStatusFilter = (v: string | null): v is StatusFilter => STATUS_FILTERS.some(f => f.value === v)
+export const matchesStatus = (c: Campaign, f: StatusFilter) => f === 'all' || STATUS[c.m.status].id === f
 
-/** Needs attention = the three attention ranks (At risk, Behind, Under-delivered) or any data condition. */
-export function matchesStatus(c: Campaign, f: StatusFilter) {
-  const { phase, status } = c.m
-  switch (f) {
-    case 'attention': return STATUS_BADGE[status].rank <= 3 || c.dataMarker !== undefined
-    case 'live': return phase === 'live'
-    case 'scheduled': return phase === 'scheduled'
-    case 'ended': return phase === 'ended' || phase === 'finalized' || phase === 'cancelled'
-    case 'paused': return phase === 'paused'
-    default: return true
-  }
+// Cancelled and No data yet are options only when such a row exists.
+const OPTIONAL: Status[] = ['cancelled', 'unknown']
+const LISTED = STATUS_ORDER.filter(s => !OPTIONAL.includes(s) || CAMPAIGNS.some(c => c.m.status === s))
+
+/** "At risk · 1"; zero counts are disabled. `scope` = rows after the advertiser and campaign filters. */
+export function statusOptions(scope: Campaign[]): SelectOption[] {
+  return [
+    { value: 'all', label: 'All statuses' },
+    ...LISTED.map(s => {
+      const n = scope.filter(c => c.m.status === s).length
+      return { value: STATUS[s].id, label: `${STATUS[s].label} · ${n}`, icon: createElement(StatusIcon, { status: s }), disabled: n === 0 }
+    }),
+  ]
 }

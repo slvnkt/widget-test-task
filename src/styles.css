@@ -27,9 +27,31 @@ p { text-wrap: pretty; }
   --proto-height: 64px; /* compact control height, prototype only, no token */
 }
 .main {
-  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-space-8);
+  padding: 0 var(--ot-space-8) var(--ot-space-8);
   min-width: 0;
 }
+/* Page title + filter bar stay on top while the page scrolls; the drawer opens under its bottom edge (--drawer-top). */
+.page-top {
+  position: sticky;
+  top: 0;
+  z-index: 25; /* above the drawer (20) so Select popovers overlap it; no layer tokens yet */
+  display: flex;
+  flex-direction: column;
+  gap: var(--ot-spacing-gap-lg);
+  padding: var(--ot-spacing-padding-xl) 0 var(--ot-space-3);
+  background: var(--ot-color-bg-secondary);
+}
+.page-top + .campaigns { margin-top: var(--ot-space-3); } /* + 12 padding above = 24 (gap-xl) */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ot-spacing-gap-sm);
+}
+/* Select widths from the design-director handoff, no tokens */
+.filter-bar > .filter-bar__period { width: 168px; }
+.filter-bar > .filter-bar__status { width: 184px; }
+.filter-bar > .filter-bar__campaign { width: 224px; }
 
 /* ── Sidebar (TEMP stand-in) ── */
 .sidenav {
@@ -121,7 +143,6 @@ p { text-wrap: pretty; }
   display: flex;
   flex-direction: column;
   gap: var(--ot-spacing-gap-xs);
-  margin-bottom: var(--ot-spacing-gap-xl);
 }
 .page-header__row {
   display: flex;
@@ -145,27 +166,34 @@ p { text-wrap: pretty; }
   white-space: nowrap;
 }
 .campaigns { gap: var(--ot-spacing-gap-lg); }
-.campaigns__filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ot-spacing-gap-md);
+.campaigns__updated {
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+  white-space: nowrap;
 }
-.campaigns__filters > .campaigns__filter { width: 180px; /* period Select width from the handoff, no token */ }
-.campaigns__content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ot-spacing-gap-md);
-}
-/* Fixed min-height = table height (32 head + 13 × 40 rows), so the card doesn't jump between views and states. */
+.campaigns .ot-card__title:focus { outline: none; } /* focus target after the drawer closes, not in the Tab order */
 .campaigns__body { display: flex; flex-direction: column; }
-.campaigns__legend { display: flex; }
 
 .campaigns-table .ot-table { table-layout: fixed; }
-/* Fixed-width % text so every bar has the same length and the guarantee lines align ("103%" is wider than 4ch). */
-/* Fixed-width value ("55.1 M · 102%") so every bar has the same length and the guarantee lines align. */
-.campaigns-table .ot-table-progress__value { flex: none; width: 12ch; white-space: nowrap; }
-.campaigns-table--windowed .ot-table-progress__value { width: 19ch; }
-.delivery-value { color: var(--ot-color-text-primary); }
+/* Fixed-width % ("103%") so every bar has the same length. */
+.campaigns-table .ot-table-progress__value { flex: none; width: 4ch; text-align: right; white-space: nowrap; }
+.delivered-cell { white-space: nowrap; }
+.delivered-cell__value {
+  color: var(--ot-color-text-primary);
+  font-size: var(--ot-typography-label-md-font-size);
+  line-height: var(--ot-typography-label-md-line-height);
+  font-weight: var(--ot-typography-label-md-font-weight);
+}
+.delivered-cell__of {
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+}
+.gap-cell { white-space: nowrap; }
+.gap-cell--secondary { color: var(--ot-color-text-secondary); }
+.gap-cell--primary { color: var(--ot-color-text-primary); }
+.gap-cell--danger { color: var(--ot-color-status-danger-secondary-text); }
 .cell-ellipsis {
   display: block;
   overflow: hidden;
@@ -191,15 +219,22 @@ p { text-wrap: pretty; }
   height: var(--ot-table-sort-icon-size);
 }
 .cell-secondary { color: var(--ot-color-text-secondary); white-space: nowrap; }
-/* The data word drops under the badge when the column is narrow, instead of widening it. */
-.status-cell {
-  display: flex;
-  flex-wrap: wrap;
+/* Status glyph + label (+ muted data word), one line. */
+.status-icon {
+  display: inline-flex;
   align-items: center;
-  gap: 0 var(--ot-spacing-gap-sm);
-  padding-block: var(--ot-spacing-padding-xs);
+  gap: var(--ot-spacing-gap-sm);
+  min-width: 0;
   white-space: nowrap;
 }
+.status-icon__glyph {
+  display: inline-flex;
+  flex: none;
+  width: var(--_size);
+  height: var(--_size);
+}
+.status-icon__glyph > svg { width: 100%; height: 100%; }
+.status-icon__label { color: var(--ot-color-text-primary); }
 .status-cell__marker {
   color: var(--ot-color-text-secondary);
   font-size: var(--ot-typography-body-sm-font-size);
@@ -209,7 +244,7 @@ p { text-wrap: pretty; }
 /* ── Drawer (TEMP stand-in) ── */
 .drawer {
   position: fixed;
-  top: 0;
+  top: var(--drawer-top, 0);
   right: 0;
   bottom: 0;
   z-index: 20; /* above the page, below the prototype control; no layer tokens yet */
@@ -308,14 +343,25 @@ p { text-wrap: pretty; }
 .details .ot-tabs__panel { padding-top: var(--ot-spacing-gap-lg); }
 
 .nowrap { white-space: nowrap; }
-.details__sources td { padding-block: var(--ot-spacing-padding-sm); vertical-align: top; }
-.details__sources .ot-table { table-layout: fixed; }
-.details__what {
-  display: block;
-  color: var(--ot-color-text-secondary);
-  font-size: var(--ot-typography-body-sm-font-size);
-  line-height: var(--ot-typography-body-sm-line-height);
+.source-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ot-spacing-gap-xs);
+  white-space: nowrap;
 }
+.source-cell__info {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ot-shape-radius-full);
+  background: none;
+  color: var(--ot-color-text-tertiary);
+  cursor: help;
+}
+.source-cell__info > svg { width: var(--ot-control-icon-size-xs); height: var(--ot-control-icon-size-xs); }
+.source-cell__info:hover { color: var(--ot-color-text-primary); }
+.source-cell__info:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
 
 .logs { color: var(--ot-color-text-secondary); }
 .logs--primary { color: var(--ot-color-text-primary); }

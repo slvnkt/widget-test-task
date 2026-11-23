@@ -1,6 +1,5 @@
 // Single-campaign delivery widget, rendered as the Campaigns drawer body (the drawer is the container: no Card).
 import type { ReactNode } from 'react'
-import { Badge } from '@ds/components/Badge'
 import { Button } from '@ds/components/Button'
 import { Divider } from '@ds/components/Divider'
 import { EmptyState } from '@ds/components/EmptyState'
@@ -9,7 +8,8 @@ import { Stat, type StatProps } from '@ds/components/Stat'
 import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 import { deliveryIn, periodLabel, windowArea, type Period } from '../data/period'
 import type { Campaign } from '../data/rows'
-import { HINTS, noteLine, signedM, STATUS_BADGE, UPDATED_AT } from './copy'
+import { StatusIcon } from '../campaigns/StatusIcon'
+import { HINTS, noteLine, signedM, UPDATED_AT } from './copy'
 import { DeliveryChart } from './DeliveryChart'
 import { Details } from './Details'
 
@@ -25,12 +25,11 @@ function footnote(m: Model) {
 
 const pctOf = (v: number, of: number) => `${Math.round((v / of) * 100)}%`
 
-/** Tile 1: lifecycle and pace in one Stat, the only status badge in the drawer (§4.2). */
+/** Tile 1: lifecycle and pace in one Stat, the only status in the drawer (§4.2). */
 function tile1(m: Model): StatProps {
-  const badge = STATUS_BADGE[m.status]
   const withBadge = (text?: ReactNode) => (
     <span className="kpis__status">
-      <Badge variant={badge.variant} size="sm" dot>{badge.label}</Badge>
+      <StatusIcon status={m.status} label />
       {text}
     </span>
   )

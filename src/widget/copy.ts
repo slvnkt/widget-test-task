@@ -1,23 +1,5 @@
 // Widget and Campaigns page copy (handoff-table-drawer §2.3, §4.2, §4.3).
-import type { BadgeVariant } from '@ds/components/Badge'
-import { CAMPAIGN, fmtM, type Model, type Status } from '../data/campaign'
-
-// Lifecycle and pace merged into one word. Green for good outcomes, red only for At risk, no amber.
-// `rank` is the attention order used by the Status sort.
-export const STATUS_BADGE: Record<Status, { label: string; variant: BadgeVariant; rank: number }> = {
-  'at-risk': { label: 'At risk', variant: 'danger', rank: 1 },
-  behind: { label: 'Behind', variant: 'neutral', rank: 2 },
-  'final-under': { label: 'Under-delivered', variant: 'neutral', rank: 3 },
-  paused: { label: 'Paused', variant: 'neutral', rank: 4 },
-  finalizing: { label: 'Finalizing', variant: 'neutral', rank: 5 },
-  'too-early': { label: 'Just launched', variant: 'neutral', rank: 6 },
-  'on-track': { label: 'On track', variant: 'success', rank: 7 },
-  ahead: { label: 'Ahead', variant: 'success', rank: 8 },
-  scheduled: { label: 'Scheduled', variant: 'neutral', rank: 9 },
-  'final-met': { label: 'Guarantee met', variant: 'success', rank: 10 },
-  cancelled: { label: 'Cancelled', variant: 'neutral', rank: 11 },
-  unknown: { label: 'No data yet', variant: 'neutral', rank: 12 },
-}
+import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 
 export const HINTS = {
   projected: 'Forecast at flight end if the remaining spots air as planned and keep delivering at the current pace.',
