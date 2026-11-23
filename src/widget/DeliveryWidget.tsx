@@ -9,19 +9,12 @@ import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 import { deliveryIn, periodLabel, windowArea, type Period } from '../data/period'
 import type { Campaign } from '../data/rows'
 import { StatusIcon } from '../campaigns/StatusIcon'
-import { HINTS, noteLine, signedM, UPDATED_AT } from './copy'
+import { rowMetrics } from '../campaigns/bar'
+import { HINTS, noteLine, signedM } from './copy'
 import { DeliveryChart } from './DeliveryChart'
 import { Details } from './Details'
 
 export type DetailsState = 'ready' | 'loading' | 'error'
-
-function footnote(m: Model) {
-  return [
-    m.confirmedThroughLabel && `Confirmed by network logs through ${m.confirmedThroughLabel}`,
-    m.prelimThroughLabel && `Preliminary through ${m.prelimThroughLabel}`,
-    UPDATED_AT,
-  ].filter(Boolean).join(' · ')
-}
 
 const pctOf = (v: number, of: number) => `${Math.round((v / of) * 100)}%`
 
@@ -39,7 +32,7 @@ function tile1(m: Model): StatProps {
       return { label: 'Starts in', value: -m.def.today, unit: 'days', secondary: withBadge() }
     case 'too-early':
       // tooEarly in the model lasts until day 3 of the flight
-      return { label: 'Projected final delivery', value: '—', secondary: withBadge(`First forecast on ${m.fmt(3)}`), hint: HINTS.projected }
+      return { label: 'Projected at flight end', value: '—', secondary: withBadge(`First forecast on ${m.fmt(3)}`), hint: HINTS.projected }
     case 'paused':
       return { label: 'Paused since', value: m.fmt(m.def.stopDay ?? m.def.today), secondary: withBadge('Forecast hidden while paused') }
     case 'cancelled':
@@ -52,7 +45,7 @@ function tile1(m: Model): StatProps {
       return { label: 'Final delivery', value: pctOf(m.delivered, m.guarantee), unit: 'of guarantee', secondary: withBadge() }
     default:
       return {
-        label: 'Projected final delivery',
+        label: 'Projected at flight end',
         value: `${Math.round(m.projPct)}%`,
         unit: 'of guarantee',
         secondary: withBadge(`${fmtM(m.projection)} projected${m.status === 'behind' && m.makegoodImps > 0 ? ' with makegood' : ''}`),
@@ -61,47 +54,50 @@ function tile1(m: Model): StatProps {
   }
 }
 
-/** Tile 2: delivered in the selected period; Flight to date keeps the per-state secondary line. */
+/** Tile 2: delivered in the selected period. The gap uses the table's rule (rowMetrics), so both show the same thing. */
 function tile2(c: Campaign, period: Period): StatProps {
   const { m } = c
   if (m.status === 'scheduled') return { label: 'Delivered to date', value: '—' }
+  const r = rowMetrics(c, period)
+  const gap = r.gap
   if (period !== 'ftd') {
-    const d = deliveryIn(c, period)
     const label = `Delivered, ${periodLabel(period).toLowerCase()}`
-    if (!d.hasData) return { label, value: '—', secondary: 'Nothing aired in this period', hint: HINTS.delivered }
-    const gap = Math.round((d.delivered - d.target) * 10) / 10
-    const secondary = gap === 0 ? `In line with plan of ${fmtM(d.target)}` : `${signedM(gap)} vs plan of ${fmtM(d.target)}`
-    return { label, value: fmtM(d.delivered), secondary, hint: HINTS.delivered }
+    if (!r.hasData) return { label, value: '—', secondary: 'Nothing aired in this period', hint: HINTS.delivered }
+    const secondary = !gap ? `Plan ${fmtM(r.target)}` : gap.value === 0 ? `In line with plan of ${fmtM(gap.ref)}` : `${signedM(gap.value)} vs plan of ${fmtM(gap.ref)}`
+    return { label, value: fmtM(r.delivered), secondary, hint: HINTS.delivered }
   }
-  const secondary: Partial<Record<Model['status'], string | undefined>> = {
+  if (m.phase === 'finalized') {
+    return { label: 'Delivered', value: fmtM(m.delivered), secondary: m.status === 'final-under' && gap ? `${signedM(gap.value)} short` : undefined, hint: HINTS.delivered }
+  }
+  const noGap: Partial<Record<Model['status'], string>> = {
     'too-early': 'Preliminary only',
     paused: `${pctOf(m.delivered, m.guarantee)} of guarantee`,
     cancelled: `${pctOf(m.delivered, m.guarantee)} of guarantee`,
-    finalizing: undefined,
-    'final-met': `${signedM(m.delivered - m.guarantee)} over guarantee`,
-    'final-under': `${signedM(m.delivered - m.guarantee)} short`,
   }
   return {
     label: 'Delivered to date',
     value: fmtM(m.delivered),
-    secondary: m.status in secondary ? secondary[m.status] : `${signedM(m.delivered - m.expected)} vs plan of ${fmtM(m.expected)}`,
+    secondary: gap ? `${signedM(gap.value)} vs ${gap.vs} of ${fmtM(gap.ref)}` : noGap[m.status],
     hint: HINTS.delivered,
   }
 }
 
-function tile3(m: Model): StatProps {
-  if (m.status === 'scheduled') return { label: 'Spots aired', value: '—' }
+// Tiles 3 and 4 stay flight-level; with a period window they say so.
+const flightLevel = (period: Period, text: string) => (period === 'ftd' ? text : `Flight to date · ${text}`)
+
+function tile3(m: Model, period: Period): StatProps {
+  if (m.status === 'scheduled') return { label: 'Spots planned', value: Math.round(CAMPAIGN.totalSpots * (m.guarantee / CAMPAIGN.guarantee)) }
   return {
     label: 'Spots aired',
     value: m.spotsAired,
     unit: `/ ${m.spotsPlannedToDate}`,
-    secondary: `${m.preempted} preempted`,
+    secondary: flightLevel(period, `${m.preempted} preempted`),
     hint: `Spots scheduled through ${m.fmt(Math.min(m.def.today - 1, m.deliveryEnd))}.`,
   }
 }
 
-function tile4(m: Model): StatProps {
-  if (m.status === 'scheduled') return { label: 'Network logs', value: '—' }
+function tile4(m: Model, period: Period): StatProps {
+  if (m.status === 'scheduled') return { label: 'Networks', value: m.networksTotal }
   const late = m.def.lateNetworks ?? 0
   const pending = m.networksTotal - m.logsReceived - late
   const secondary =
@@ -109,7 +105,7 @@ function tile4(m: Model): StatProps {
       : pending + late === 0 ? 'All received'
         : late > 0 ? `${pending} pending, ${late} late`
           : `${pending} pending`
-  return { label: 'Network logs', value: m.logsReceived, unit: `/ ${m.networksTotal}`, secondary, hint: HINTS.logs }
+  return { label: 'Network logs', value: m.logsReceived, unit: `/ ${m.networksTotal}`, secondary: flightLevel(period, secondary), hint: HINTS.logs }
 }
 
 function Kpis({ tiles }: { tiles: StatProps[] }) {
@@ -152,7 +148,6 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
         <Divider spacing="lg" />
         <h3 className="delivery__chart-title">Cumulative impressions</h3>
         <Skeleton shape="block" height={240} />
-        <p className="delivery__footnote"><Skeleton size="sm" width={320} /></p>
       </div>
     )
   }
@@ -161,12 +156,11 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
   const note = noteLine(m)
   return (
     <div className="delivery">
-      <Kpis tiles={[tile1(m), tile2(c, period), tile3(m), tile4(m)]} />
+      <Kpis tiles={[tile1(m), tile2(c, period), tile3(m, period), tile4(m, period)]} />
       {note && <p className="delivery__note">{note}</p>}
       <Divider spacing="lg" />
       <h3 className="delivery__chart-title">Cumulative impressions</h3>
       <DeliveryChart m={m} area={windowArea(c, period)} areaLabel={periodLabel(period)} />
-      <p className="delivery__footnote">{footnote(m)}</p>
       {m.status !== 'scheduled' && <Details m={m} />}
     </div>
   )

@@ -16,7 +16,7 @@ export function sortCampaigns(rows: Campaign[], sort: TableSort | null, period: 
     flight: (a, b) => a.startOffset - b.startOffset || byName(a, b),
     delivered: metric(c => { const r = rowMetrics(c, period); return r.hasData ? r.delivered : null }),
     progress: metric(c => rowMetrics(c, period).pct),
-    gap: metric(c => rowMetrics(c, period).gap),
+    gap: metric(c => rowMetrics(c, period).gap?.value ?? null),
   }
   const fn = compare[sort.key] ?? (() => 0)
   const dir = sort.direction === 'asc' ? 1 : -1

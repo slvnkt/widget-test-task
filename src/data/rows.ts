@@ -2,7 +2,7 @@
 // Every row shares the real today (Nov 23): its flight starts `startOffset` days after Nov 3.
 import { buildModel, CAMPAIGN, SCENARIOS, type Model } from './campaign'
 
-export type DataMarker = 'Revised' | 'Logs late' | 'No smart-TV data'
+export type DataMarker = 'Revised' | 'Logs late' | 'No ACR'
 
 export interface CampaignRow {
   id: string
@@ -30,7 +30,7 @@ const ROWS: CampaignRow[] = [
   { id: 'gift-guide', brand: 'Northwind Coffee', name: 'Holiday Gift Guide', scenarioId: 'just-launched', guarantee: 36 },
   { id: 'peppermint', brand: 'Northwind Coffee', name: 'Peppermint Mocha', scenarioId: 'revised', guarantee: 44, dataMarker: 'Revised' },
   { id: 'pinecrest', brand: 'Pinecrest Travel', name: 'Winter Getaways', scenarioId: 'logs-late', guarantee: 28, dataMarker: 'Logs late' },
-  { id: 'ostara', brand: 'Ostara Bakery', name: 'Winter Comfort', scenarioId: 'acr-unavailable', guarantee: 50, dataMarker: 'No smart-TV data' },
+  { id: 'ostara', brand: 'Ostara Bakery', name: 'Winter Comfort', scenarioId: 'acr-unavailable', guarantee: 50, dataMarker: 'No ACR' },
   { id: 'brightline', brand: 'Brightline Mobile', name: 'Black Friday Push', scenarioId: 'ahead', guarantee: 32 },
   { id: 'new-year', brand: 'Northwind Coffee', name: 'New Year Mornings', scenarioId: 'scheduled', guarantee: 40 },
   { id: 'pumpkin-spice', brand: 'Northwind Coffee', name: 'Pumpkin Spice Fall', scenarioId: 'final-met', guarantee: 30 },

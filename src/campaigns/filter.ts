@@ -9,13 +9,13 @@ import { StatusIcon } from './StatusIcon'
 /** 'all' or a STATUS id. */
 export type StatusFilter = string
 
-export const isStatusFilter = (v: string | null): v is StatusFilter => v === 'all' || STATUS_ORDER.some(s => STATUS[s].id === v)
-
-export const matchesStatus = (c: Campaign, f: StatusFilter) => f === 'all' || STATUS[c.m.status].id === f
-
 // Cancelled and No data yet are options only when such a row exists.
 const OPTIONAL: Status[] = ['cancelled', 'unknown']
 const LISTED = STATUS_ORDER.filter(s => !OPTIONAL.includes(s) || CAMPAIGNS.some(c => c.m.status === s))
+
+export const isStatusFilter = (v: string | null): v is StatusFilter => v === 'all' || LISTED.some(s => STATUS[s].id === v)
+
+export const matchesStatus = (c: Campaign, f: StatusFilter) => f === 'all' || STATUS[c.m.status].id === f
 
 /** "At risk · 1"; zero counts are disabled. `scope` = rows after the advertiser and campaign filters. */
 export function statusOptions(scope: Campaign[]): SelectOption[] {

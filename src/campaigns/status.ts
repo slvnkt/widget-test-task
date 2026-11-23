@@ -16,7 +16,7 @@ export interface StatusDef {
 
 export const STATUS: Record<Status, StatusDef> = {
   'at-risk': { id: 'at-risk', label: 'At risk', rank: 1, glyph: 'half', color: 'var(--ot-color-status-danger-primary)' },
-  behind: { id: 'behind', label: 'Behind', rank: 2, glyph: 'half', color: 'var(--ot-color-brand-primary)' },
+  behind: { id: 'behind', label: 'Behind', rank: 2, glyph: 'half', color: 'var(--ot-color-text-secondary)' },
   'final-under': { id: 'under-delivered', label: 'Under-delivered', rank: 3, glyph: 'minus', color: 'var(--ot-color-text-secondary)' },
   paused: { id: 'paused', label: 'Paused', rank: 4, glyph: 'pause', color: 'var(--ot-color-text-secondary)' },
   finalizing: { id: 'finalizing', label: 'Finalizing', rank: 5, glyph: 'three-quarter', color: 'var(--ot-color-brand-primary)' },

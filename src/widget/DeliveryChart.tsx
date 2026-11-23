@@ -10,11 +10,11 @@ const HEIGHT = 240
 const X_TICK_DAYS = [0, 14, 28, CAMPAIGN.flightDays - 1]
 const PLAN_LABEL_DAY = 28
 
-/** The guarantee always sits on a tick: quarters up to 125% (48M → 0, 12 … 60), halves when quarters aren't whole millions. */
-function yTicks(guarantee: number) {
-  const quarters = Number.isInteger(guarantee / 4)
-  const ticks = quarters ? [0, 1, 2, 3, 4, 5].map(i => (i * guarantee) / 4) : [0, guarantee / 2, guarantee]
-  return { ticks, max: guarantee * 1.25 }
+/** Round steps (5 / 10 / 20M), 4–6 ticks covering the guarantee and the forecast; the guarantee line carries its own label. */
+function yTicks(top: number) {
+  const step = [5, 10, 20, 50].find(s => Math.ceil(top / s) <= 5) ?? 50
+  const n = Math.max(3, Math.ceil(top / step))
+  return { ticks: Array.from({ length: n + 1 }, (_, i) => i * step), max: n * step }
 }
 
 const config: ChartConfig = {
@@ -120,7 +120,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
   const last = data[data.length - 1]
   const planAt = data[PLAN_LABEL_DAY]
   const xTicks = X_TICK_DAYS.map(d => data[d].label)
-  const yAxis = yTicks(m.guarantee)
+  const yAxis = yTicks(Math.max(m.guarantee * 1.1, m.projHigh, m.delivered))
   // Paused: a "Paused" line at the stop day replaces "Today".
   const vLine = m.phase === 'paused' && m.def.stopDay !== undefined
     ? { x: m.fmt(m.def.stopDay), text: 'Paused' }
@@ -155,8 +155,8 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
         />
 
         <Area dataKey="band" stroke="none" fill="var(--ot-color-bg-tertiary)" fillOpacity={1} activeDot={false} isAnimationActive={false} />
-        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text="Guarantee" anchor="start" dy={-6} />} />
-        <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} isAnimationActive={false} />
+        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Guarantee ${+m.guarantee.toFixed(1)}M`} anchor="start" dy={-6} />} />
+        <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="1 3" strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} />
         <Area dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} fill="var(--ot-color-data-track)" fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Area dataKey="prelim" type="monotone" stroke="var(--color-prelim)" strokeWidth={2} strokeDasharray="2 3" strokeLinecap="round" fill={`url(#${hatchId})`} fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Line dataKey="projection" type="linear" stroke="var(--color-projection)" strokeWidth={1.5} strokeDasharray="6 4" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />

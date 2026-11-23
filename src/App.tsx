@@ -64,13 +64,17 @@ function readHash() {
   const period = q.get('period')
   const status = q.get('status')
   const filter = CAMPAIGNS.find(c => c.id === q.get('campaign'))
-  const open = q.get('open')
+  const st: StatusFilter = isStatusFilter(status) ? status : 'all'
+  const campaignFilter = filter && inScope(filter, advertiser) ? filter.id : null
+  // The drawer opens only for a campaign that is a visible row.
+  const open = CAMPAIGNS.find(c => c.id === q.get('open'))
+  const visible = open && inScope(open, advertiser) && matchesStatus(open, st) && (!campaignFilter || open.id === campaignFilter)
   return {
     advertiser,
     period: isPeriod(period) ? period : ('ftd' as Period),
-    status: isStatusFilter(status) ? status : ('all' as StatusFilter),
-    campaignFilter: filter && inScope(filter, advertiser) ? filter.id : null,
-    campaignId: CAMPAIGNS.some(c => c.id === open) ? open : null,
+    status: st,
+    campaignFilter,
+    campaignId: visible ? open.id : null,
   }
 }
 
@@ -85,14 +89,15 @@ function writeHash(advertiser: string, period: Period, status: StatusFilter, cam
   history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search)
 }
 
-function description(c: Campaign) {
+/** The brand leads only in All advertisers; otherwise the sidebar already names it. */
+function description(c: Campaign, withBrand: boolean) {
   const { m } = c
   return [
-    c.brand,
+    withBrand && c.brand,
     `${fmtM(m.guarantee)} impressions guaranteed`,
     `${CAMPAIGN.demo}, ${CAMPAIGN.currency}`,
     `${m.fmt(0)} – ${m.fmt(CAMPAIGN.flightDays - 1)}, ${dateOf(CAMPAIGN.flightDays - 1 + c.startOffset).getFullYear()}`,
-  ].join(' · ')
+  ].filter(Boolean).join(' · ')
 }
 
 export function App() {
@@ -112,7 +117,7 @@ export function App() {
   const brand = advertiserName(advertiser) // undefined = All advertisers
   // Campaign options are the advertiser's campaigns A–Z, not narrowed by Status.
   const advertiserCampaigns = useMemo(() => CAMPAIGNS.filter(c => inScope(c, advertiser)).sort((a, b) => a.name.localeCompare(b.name)), [advertiser])
-  const campaignOptions = useMemo(() => [{ value: ALL, label: 'All campaigns' }, ...advertiserCampaigns.map(c => ({ value: c.id, label: c.name }))], [advertiserCampaigns])
+  const campaignOptions = useMemo(() => [{ value: ALL, label: 'All campaigns' }, ...advertiserCampaigns.map(c => ({ value: c.id, label: c.name, disabled: !matchesStatus(c, statusFilter) }))], [advertiserCampaigns, statusFilter])
   // Status counts follow the advertiser and campaign filters (status itself does not depend on the period).
   const scoped = useMemo(() => advertiserCampaigns.filter(c => !campaignFilter || c.id === campaignFilter), [advertiserCampaigns, campaignFilter])
   const rows = useMemo(
@@ -186,6 +191,10 @@ export function App() {
       return null
     })
   }, [])
+  // A filter or advertiser change that hides the open campaign closes the drawer (focus goes to the card title).
+  useEffect(() => {
+    if (campaignId && !rows.some(c => c.id === campaignId)) close()
+  }, [campaignId, rows, close])
   const retry = useCallback(() => setProto('live'), [])
 
   return (
@@ -200,7 +209,7 @@ export function App() {
       <main className="main">
         {/* Sticky so the filters stay visible above the drawer at any scroll. */}
         <div className="page-top" ref={pageTopRef}>
-          <PageHeader title="Campaigns" description={brand} />
+          <PageHeader title="Campaigns" />
           {(LIST_STATE[proto] === 'ready' || LIST_STATE[proto] === 'loading') && (
             <div className="filter-bar" role="group" aria-label="Filters">
               <Select size="sm" aria-label="Period" className="filter-bar__period" value={period} onValueChange={v => setPeriod(v as Period)} options={PERIOD_OPTIONS} />
@@ -224,7 +233,7 @@ export function App() {
         />
       </main>
 
-      <Drawer open={campaign !== null} title={campaign?.name} description={campaign && description(campaign)} onClose={close} titleRef={titleRef}>
+      <Drawer open={campaign !== null} title={campaign?.name} description={campaign && description(campaign, !brand)} onClose={close} titleRef={titleRef}>
         {campaign && <DeliveryWidget c={campaign} period={period} state={DETAILS_STATE[proto] ?? 'ready'} onRetry={retry} />}
       </Drawer>
 

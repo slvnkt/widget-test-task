@@ -71,7 +71,6 @@ export function Details({ m }: { m: Model }) {
               rows={m.networks}
               getRowKey={r => r.name}
               density="compact"
-              stickyHeader
               caption="Network log status"
               hideCaption
               defaultSort={{ key: 'status', direction: 'asc' }}

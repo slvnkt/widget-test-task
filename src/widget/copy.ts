@@ -16,9 +16,10 @@ export const SOURCES = {
   forecast: { source: 'Forecast', use: 'Projected', what: 'Remaining spots in the plan at the current delivery pace.' },
 }
 
-/** "+0.4M" / "−0.2M" with a true minus sign. */
+/** "+0.4M" / "−0.2M" with a true minus sign; zero has no sign. */
 export const signedM = (v: number) => {
   const r = Math.round(v * 10) / 10
+  if (r === 0) return '0.0M'
   return r < 0 ? `−${Math.abs(r).toFixed(1)}M` : `+${r.toFixed(1)}M`
 }
 
@@ -29,12 +30,16 @@ export function noteLine(m: Model): string | null {
     const by = def.revised.by * (m.guarantee / CAMPAIGN.guarantee)
     return `Revised down ${fmtM(by)} on ${m.fmt(def.revised.on)}: network logs replaced preliminary estimates for ${m.fmtRange(def.revised.from, def.revised.to)}.`
   }
-  if (def.lateNetworks) return `${def.lateNetworks} networks have sent no logs since ${m.fmt(def.lastLogDay ?? -1)}. Simulmedia ops is following up.`
+  if (def.lateNetworks) {
+    const names = m.networks.filter(n => n.status === 'late').map(n => n.name)
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+    return `No logs from ${list} since ${m.fmt(def.lastLogDay ?? -1)}. Simulmedia ops is following up.`
+  }
   if (m.prelimThrough === null && m.phase === 'live') return `No smart-TV estimates this week, so status uses network logs through ${m.confirmedThroughLabel} only.`
   if (m.status === 'behind' && def.makegood?.from !== undefined) {
     return `${m.makegoodSpots} makegood spots run ${m.fmt(def.makegood.from)} – ${m.fmt(def.makegood.to)} and add ${fmtM(m.makegoodImps)}.`
   }
-  if (m.status === 'at-risk') return `Short by ${fmtM(m.guarantee - m.projection)} at flight end, no makegood scheduled yet. Your Simulmedia account manager will propose one.`
+  if (m.status === 'at-risk') return 'No makegood scheduled yet. Your Simulmedia account manager will propose one.'
   if (m.status === 'final-under' && def.makegood) return `Makegood spots for ${fmtM(m.guarantee - m.delivered)} run by ${m.fmt(def.makegood.to)}.`
   return null
 }
