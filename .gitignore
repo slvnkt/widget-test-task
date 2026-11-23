@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+dist/
+.env*
+
+# Working docs, local only
+*.md
+!README.md
