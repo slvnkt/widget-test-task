@@ -22,8 +22,12 @@ p { text-wrap: pretty; }
   grid-template-columns: 240px minmax(0, 1fr); /* sidebar width from the handoff, no token */
   min-height: 100vh;
 }
+.app {
+  /* Room under page and drawer content so the floating prototype control never covers the last rows. */
+  --proto-clearance: calc(var(--ot-space-4) * 2 + 64px); /* compact control height, prototype only, no token */
+}
 .main {
-  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-space-8);
+  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--proto-clearance);
   min-width: 0;
 }
 
@@ -140,8 +144,12 @@ p { text-wrap: pretty; }
 }
 .campaigns { gap: var(--ot-spacing-gap-lg); }
 .campaigns .ot-card__header { align-items: center; }
-.campaigns .ot-card__action { gap: var(--ot-spacing-gap-md); }
-.campaigns__period { width: 180px; /* from the handoff, no token */ }
+.campaigns__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ot-spacing-gap-md);
+}
+.campaigns__filters > .campaigns__filter { width: 180px; /* period Select width from the handoff, no token */ }
 .campaigns__content {
   display: flex;
   flex-direction: column;
@@ -167,6 +175,25 @@ p { text-wrap: pretty; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Rows open the drawer: the name reads as a link, the chevron says "there is more". */
+.campaign-name {
+  color: var(--ot-color-text-link);
+  font-weight: var(--ot-font-weight-medium);
+}
+.campaigns-table tbody tr:hover .campaign-name,
+.cchart__row:hover .campaign-name {
+  color: var(--ot-color-text-link-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.row-chevron {
+  display: inline-flex;
+  color: var(--ot-color-text-tertiary);
+}
+.row-chevron > svg {
+  width: var(--ot-table-sort-icon-size);
+  height: var(--ot-table-sort-icon-size);
+}
 .cell-secondary { color: var(--ot-color-text-secondary); white-space: nowrap; }
 .status-cell {
   display: inline-flex;
@@ -185,6 +212,7 @@ p { text-wrap: pretty; }
   --_pad: var(--ot-table-cell-padding-x);
   --_label: 340px; /* from the handoff, no token */
   --_value: 64px; /* from the handoff, no token */
+  --_chevron: var(--ot-table-sort-icon-size);
   --_gap: var(--ot-spacing-gap-lg);
   display: flex;
   flex-direction: column;
@@ -193,7 +221,7 @@ p { text-wrap: pretty; }
 .cchart__axis,
 .cchart__row {
   display: grid;
-  grid-template-columns: var(--_label) minmax(0, 1fr) var(--_value);
+  grid-template-columns: var(--_label) minmax(0, 1fr) var(--_value) var(--_chevron);
   align-items: center;
   column-gap: var(--_gap);
   padding-inline: var(--_pad);
@@ -232,7 +260,7 @@ p { text-wrap: pretty; }
 /* Tooltip anchored at the bar end instead of the row centre. */
 .cchart__anchor > .ot-tooltip--top,
 .cchart__anchor > .ot-tooltip--bottom {
-  left: calc(var(--_pad) + var(--_label) + var(--_gap) + (100% - 2 * var(--_pad) - var(--_label) - var(--_value) - 2 * var(--_gap)) * var(--_t));
+  left: calc(var(--_pad) + var(--_label) + var(--_gap) + (100% - 2 * var(--_pad) - var(--_label) - var(--_value) - var(--_chevron) - 3 * var(--_gap)) * var(--_t));
 }
 .cchart__row {
   width: 100%;
@@ -321,7 +349,7 @@ p { text-wrap: pretty; }
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--ot-spacing-padding-xl);
+  padding: var(--ot-spacing-padding-xl) var(--ot-spacing-padding-xl) var(--proto-clearance);
 }
 
 /* ── Delivery widget (drawer body) ── */
@@ -343,6 +371,11 @@ p { text-wrap: pretty; }
 .kpis__cell:nth-child(5), .kpis__cell:nth-child(7) { padding-bottom: 0; }
 .kpis__cell:nth-child(1), .kpis__cell:nth-child(5) { padding-left: 0; }
 .kpis__cell:nth-child(3), .kpis__cell:nth-child(7) { padding-right: 0; }
+.kpis .ot-stat__secondary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .kpis__status {
   display: inline-flex;
   align-items: center;
@@ -369,6 +402,16 @@ p { text-wrap: pretty; }
 }
 .details { margin-top: var(--ot-spacing-gap-xl); }
 .details .ot-tabs__panel { padding-top: var(--ot-spacing-gap-lg); }
+
+.nowrap { white-space: nowrap; }
+.details__sources td { padding-block: var(--ot-spacing-padding-sm); vertical-align: top; }
+.details__sources .ot-table { table-layout: fixed; }
+.details__what {
+  display: block;
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+}
 
 .logs { color: var(--ot-color-text-secondary); }
 .logs--primary { color: var(--ot-color-text-primary); }

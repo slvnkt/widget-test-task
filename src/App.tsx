@@ -5,6 +5,7 @@ import { Select } from '@ds/components/Select'
 import type { TableSort } from '@ds/components/Table'
 import { CampaignsCard, type ListState, type ViewMode } from './campaigns/CampaignsCard'
 import { rowLabel } from './campaigns/CampaignsTable'
+import { isStatusFilter, matchesStatus, type StatusFilter } from './campaigns/filter'
 import { sortCampaigns } from './campaigns/sort'
 import { CAMPAIGN, dateOf, fmtM } from './data/campaign'
 import { isPeriod, type Period } from './data/period'
@@ -40,21 +41,24 @@ const PROTO_OPTIONS: Array<{ value: ProtoState; label: string }> = [
 const LIST_STATE: Record<ProtoState, ListState> = { live: 'ready', loading: 'loading', error: 'error', empty: 'empty', 'details-loading': 'ready', 'details-error': 'ready' }
 const DETAILS_STATE: Partial<Record<ProtoState, DetailsState>> = { 'details-loading': 'loading', 'details-error': 'error' }
 
-/** `#period=7d&view=chart&campaign=northwind`; defaults (Flight to date, table, no drawer) are omitted. Unknown values are dropped. */
+/** `#period=7d&status=live&view=chart&campaign=northwind`; defaults (Flight to date, all statuses, table, no drawer) are omitted. Unknown values are dropped. */
 function readHash() {
   const q = new URLSearchParams(location.hash.slice(1))
   const period = q.get('period')
+  const status = q.get('status')
   const id = q.get('campaign')
   return {
     period: isPeriod(period) ? period : ('ftd' as Period),
+    status: isStatusFilter(status) ? status : ('all' as StatusFilter),
     view: (q.get('view') === 'chart' ? 'chart' : 'table') as ViewMode,
     campaignId: CAMPAIGNS.some(c => c.id === id) ? id : null,
   }
 }
 
-function writeHash(period: Period, view: ViewMode, campaignId: string | null) {
+function writeHash(period: Period, status: StatusFilter, view: ViewMode, campaignId: string | null) {
   const q = new URLSearchParams()
   if (period !== 'ftd') q.set('period', period)
+  if (status !== 'all') q.set('status', status)
   if (view !== 'table') q.set('view', view)
   if (campaignId) q.set('campaign', campaignId)
   const hash = q.toString()
@@ -74,6 +78,7 @@ function description(c: Campaign) {
 export function App() {
   const initial = useMemo(readHash, [])
   const [period, setPeriod] = useState<Period>(initial.period)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initial.status)
   const [view, setView] = useState<ViewMode>(initial.view)
   const [campaignId, setCampaignId] = useState<string | null>(initial.campaignId)
   const [sort, setSort] = useState<TableSort | null>(null)
@@ -81,14 +86,15 @@ export function App() {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const returnTo = useRef<string | null>(null)
 
-  const rows = useMemo(() => sortCampaigns(CAMPAIGNS, sort, period), [sort, period])
+  const rows = useMemo(() => sortCampaigns(CAMPAIGNS.filter(c => matchesStatus(c, statusFilter)), sort, period), [sort, period, statusFilter])
   const campaign = CAMPAIGNS.find(c => c.id === campaignId) ?? null
 
-  useEffect(() => writeHash(period, view, campaignId), [period, view, campaignId])
+  useEffect(() => writeHash(period, statusFilter, view, campaignId), [period, statusFilter, view, campaignId])
   useEffect(() => {
     const on = () => {
       const h = readHash()
       setPeriod(h.period)
+      setStatusFilter(h.status)
       setView(h.view)
       setCampaignId(h.campaignId)
     }
@@ -129,6 +135,8 @@ export function App() {
           state={LIST_STATE[proto]}
           period={period}
           onPeriodChange={setPeriod}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
           view={view}
           onViewChange={setView}
           sort={sort}
@@ -146,7 +154,7 @@ export function App() {
       <Card as="aside" variant="outlined" padding="md" className="proto" aria-label="Prototype controls">
         <Select
           size="sm"
-          label="Prototype state"
+          aria-label="Prototype state"
           value={proto}
           onValueChange={v => setProto(v as ProtoState)}
           options={PROTO_OPTIONS}

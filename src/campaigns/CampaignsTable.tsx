@@ -1,3 +1,4 @@
+import { CaretRight } from '@phosphor-icons/react'
 import { Badge } from '@ds/components/Badge'
 import { NumberCell, Table, type TableColumn, type TableSort } from '@ds/components/Table'
 import type { Period } from '../data/period'
@@ -31,7 +32,7 @@ interface Props {
 
 export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, onOpen, loading }: Props) {
   const columns: TableColumn<Campaign>[] = [
-    { key: 'name', header: 'Campaign', width: 220, sortable: true, render: c => <span className="cell-ellipsis" title={c.name}>{c.name}</span> },
+    { key: 'name', header: 'Campaign', width: 220, sortable: true, render: c => <span className="cell-ellipsis campaign-name" title={c.name}>{c.name}</span> },
     { key: 'brand', header: 'Advertiser', width: 150, sortable: true, render: c => <span className="cell-ellipsis cell-secondary" title={c.brand}>{c.brand}</span> },
     { key: 'status', header: 'Status', width: 200, sortable: true, render: c => <StatusCell c={c} /> },
     { key: 'flight', header: 'Flight', width: 132, sortable: true, render: c => <span className="cell-secondary">{c.m.fmt(0)} – {c.m.fmt(41)}</span> },
@@ -48,6 +49,8 @@ export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, o
       },
     },
     { key: 'delivery', header: period === 'ftd' ? 'Delivery' : 'Delivery vs plan', sortable: true, render: c => <SegmentedProgressCell bar={barFor(c, period, 'M')} /> },
+    // Opens the drawer: a muted chevron says the row is a way in (the row itself is the button).
+    { key: 'open', header: <span className="sr-only">Details</span>, width: 40, render: () => <span className="row-chevron" aria-hidden="true"><CaretRight /></span> },
   ]
 
   return (

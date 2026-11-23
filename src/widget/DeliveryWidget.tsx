@@ -109,14 +109,14 @@ function tile4(m: Model): StatProps {
     m.status === 'too-early' ? 'Logs start in 5–10 days'
       : pending + late === 0 ? 'All received'
         : late > 0 ? `${pending} pending, ${late} late`
-          : `${pending} pending, usually 5–10 days`
+          : `${pending} pending`
   return { label: 'Network logs', value: m.logsReceived, unit: `/ ${m.networksTotal}`, secondary, hint: HINTS.logs }
 }
 
 function Kpis({ tiles }: { tiles: StatProps[] }) {
   const cell = (t: StatProps, i: number) => (
     <div className="kpis__cell" key={i}>
-      <Stat size={i === 0 ? 'lg' : 'md'} {...t} />
+      <Stat size="md" {...t} />
     </div>
   )
   return (

@@ -8,7 +8,7 @@ const LOGS_TEXT: Record<NetworkRow['status'], string> = { received: 'Received', 
 const LOGS_RANK: Record<NetworkRow['status'], number> = { late: 0, pending: 1, received: 2 }
 
 const networkColumns: TableColumn<NetworkRow>[] = [
-  { key: 'name', header: 'Network', sortable: true },
+  { key: 'name', header: 'Network', sortable: true, render: r => <span className="nowrap">{r.name}</span> },
   {
     key: 'status',
     header: 'Logs',
@@ -16,17 +16,18 @@ const networkColumns: TableColumn<NetworkRow>[] = [
     sortValue: r => LOGS_RANK[r.status],
     render: r => <span className={r.status === 'pending' ? 'logs' : 'logs logs--primary'}>{LOGS_TEXT[r.status]}</span>,
   },
-  { key: 'through', header: 'Logs through' },
+  { key: 'through', header: 'Logs through', render: r => <span className="nowrap">{r.through}</span> },
   { key: 'aired', header: 'Spots aired', align: 'right', sortable: true, render: r => <NumberCell value={`${r.aired} / ${r.scheduled}`} /> },
   { key: 'preempted', header: 'Preempted', align: 'right', sortable: true, render: r => <NumberCell value={r.preempted > 0 ? r.preempted : '—'} /> },
 ]
 
 interface SourceRow { source: string; covers: string; use: string; what: string }
 const sourceColumns: TableColumn<SourceRow>[] = [
-  { key: 'source', header: 'Source' },
-  { key: 'covers', header: 'Covers' },
-  { key: 'use', header: 'Use' },
-  { key: 'what', header: 'What it is' },
+  // Short facts stay on one line; the explanation takes the rest of the width and wraps.
+  { key: 'source', header: 'Source', width: 192, render: r => <span className="nowrap">{r.source}</span> },
+  { key: 'covers', header: 'Covers', width: 128, render: r => <span className="nowrap">{r.covers}</span> },
+  { key: 'use', header: 'Use', width: 164, render: r => <span className="nowrap">{r.use}</span> },
+  { key: 'what', header: 'What it is', render: r => <span className="details__what">{r.what}</span> },
 ]
 
 function sourceRows(m: Model): SourceRow[] {
@@ -68,7 +69,7 @@ export function Details({ m }: { m: Model }) {
         {
           value: 'sources',
           label: 'Sources',
-          content: <Table columns={sourceColumns} rows={sourceRows(m)} getRowKey={r => r.source} caption="Why the numbers differ" hideCaption />,
+          content: <Table className="details__sources" columns={sourceColumns} rows={sourceRows(m)} getRowKey={r => r.source} caption="Why the numbers differ" hideCaption />,
         },
       ]}
     />

@@ -10,6 +10,7 @@ import type { Campaign } from '../data/rows'
 import { UPDATED_AT } from '../widget/copy'
 import { CampaignsChart } from './CampaignsChart'
 import { CampaignsTable } from './CampaignsTable'
+import { STATUS_FILTERS, type StatusFilter } from './filter'
 
 export type ViewMode = 'table' | 'chart'
 export type ListState = 'ready' | 'loading' | 'error' | 'empty'
@@ -36,6 +37,8 @@ interface Props {
   state: ListState
   period: Period
   onPeriodChange: (p: Period) => void
+  statusFilter: StatusFilter
+  onStatusFilterChange: (f: StatusFilter) => void
   view: ViewMode
   onViewChange: (v: ViewMode) => void
   sort: TableSort | null
@@ -45,7 +48,7 @@ interface Props {
   onRetry: () => void
 }
 
-export function CampaignsCard({ rows, state, period, onPeriodChange, view, onViewChange, sort, onSortChange, selectedId, onOpen, onRetry }: Props) {
+export function CampaignsCard({ rows, state, period, onPeriodChange, statusFilter, onStatusFilterChange, view, onViewChange, sort, onSortChange, selectedId, onOpen, onRetry }: Props) {
   const showToggle = state === 'ready' || state === 'loading'
   const loading = state === 'loading'
 
@@ -55,30 +58,42 @@ export function CampaignsCard({ rows, state, period, onPeriodChange, view, onVie
         title="Delivery by campaign"
         titleAs="h2"
         action={
-          <>
-            <Select
-              size="sm"
-              aria-label="Period"
-              className="campaigns__period"
-              value={period}
-              onValueChange={v => onPeriodChange(v as Period)}
-              options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
+          showToggle && (
+            <Tabs
+              variant="filled"
+              label="View"
+              value={view}
+              onValueChange={v => onViewChange(v as ViewMode)}
+              items={[
+                { value: 'table', icon: <TableIcon />, label: <span className="sr-only">Table view</span> },
+                { value: 'chart', icon: <ChartBarHorizontal />, label: <span className="sr-only">Chart view</span> },
+              ]}
             />
-            {showToggle && (
-              <Tabs
-                variant="filled"
-                label="View"
-                value={view}
-                onValueChange={v => onViewChange(v as ViewMode)}
-                items={[
-                  { value: 'table', icon: <TableIcon />, label: <span className="sr-only">Table view</span> },
-                  { value: 'chart', icon: <ChartBarHorizontal />, label: <span className="sr-only">Chart view</span> },
-                ]}
-              />
-            )}
-          </>
+          )
         }
       />
+
+      {/* Filters sit on the left so they stay usable while the 720px drawer covers the right of the card. */}
+      {showToggle && (
+        <div className="campaigns__filters" role="group" aria-label="Filters">
+          <Select
+            size="sm"
+            aria-label="Period"
+            className="campaigns__filter"
+            value={period}
+            onValueChange={v => onPeriodChange(v as Period)}
+            options={PERIODS.map(p => ({ value: p.value, label: p.label }))}
+          />
+          <Select
+            size="sm"
+            aria-label="Status"
+            className="campaigns__filter"
+            value={statusFilter}
+            onValueChange={v => onStatusFilterChange(v as StatusFilter)}
+            options={STATUS_FILTERS}
+          />
+        </div>
+      )}
 
       <div className="campaigns__content">
         <div className="campaigns__body">
@@ -91,6 +106,8 @@ export function CampaignsCard({ rows, state, period, onPeriodChange, view, onVie
             />
           ) : state === 'empty' ? (
             <EmptyState variant="no-data" title="No campaigns yet" description="Campaigns appear here once a media plan is booked." />
+          ) : !loading && rows.length === 0 ? (
+            <EmptyState size="compact" title="No campaigns match" description="Try another status filter." />
           ) : view === 'table' ? (
             <CampaignsTable rows={rows} period={period} sort={sort} onSortChange={onSortChange} selectedId={selectedId} onOpen={onOpen} loading={loading} />
           ) : (

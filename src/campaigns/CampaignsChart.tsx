@@ -1,5 +1,6 @@
 // Chart view: every campaign on one % axis, built from DS Progress rows plus a small local axis row (no chart library).
 import type { CSSProperties } from 'react'
+import { CaretRight } from '@phosphor-icons/react'
 import { Progress } from '@ds/components/Progress'
 import { Skeleton } from '@ds/components/Skeleton'
 import { Tooltip, type TooltipRow } from '@ds/components/Tooltip'
@@ -52,6 +53,7 @@ export function CampaignsChart({ rows, period, selectedId, onOpen, loading }: Pr
         ))}
       </span>
       <span />
+      <span />
     </div>
   )
 
@@ -63,6 +65,7 @@ export function CampaignsChart({ rows, period, selectedId, onOpen, loading }: Pr
           <div key={i} className="cchart__row cchart__row--skeleton">
             <Skeleton size="md" width="60%" />
             <span className="cchart__bar"><Skeleton shape="block" height={12} /></span>
+            <span />
             <span />
           </div>
         ))}
@@ -96,7 +99,7 @@ export function CampaignsChart({ rows, period, selectedId, onOpen, loading }: Pr
                   onClick={() => onOpen(c.id)}
                 >
                   <span className="cchart__label">
-                    <span className="cchart__name">{c.name}</span>
+                    <span className="cchart__name campaign-name">{c.name}</span>
                     <StatusCell c={c} />
                   </span>
                   <span className="cchart__bar">
@@ -104,6 +107,7 @@ export function CampaignsChart({ rows, period, selectedId, onOpen, loading }: Pr
                     <Progress size="md" max={max} segments={bar.segments} markers={bar.markers} muted={bar.muted} showLegend={false} showMarkerLabels={false} ariaLabel={bar.aria} />
                   </span>
                   <span className="cchart__value">{bar.pct === null ? '—' : `${bar.pct}%`}</span>
+                  <span className="row-chevron" aria-hidden="true"><CaretRight /></span>
                 </button>
               </Tooltip>
             </li>
