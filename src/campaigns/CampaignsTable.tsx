@@ -1,6 +1,6 @@
 import { CaretRight } from '@phosphor-icons/react'
 import { Badge } from '@ds/components/Badge'
-import { NumberCell, Table, type TableColumn, type TableSort } from '@ds/components/Table'
+import { NumberCell, Table, TwoLineCell, type TableColumn, type TableSort } from '@ds/components/Table'
 import type { Period } from '../data/period'
 import type { Campaign } from '../data/rows'
 import { STATUS_BADGE } from '../widget/copy'
@@ -28,34 +28,33 @@ interface Props {
   selectedId: string | null
   onOpen: (id: string) => void
   loading?: boolean
+  showBrand?: boolean
 }
 
-export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, onOpen, loading }: Props) {
+export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, onOpen, loading, showBrand }: Props) {
   const columns: TableColumn<Campaign>[] = [
-    { key: 'name', header: 'Campaign', width: 220, sortable: true, render: c => <span className="cell-ellipsis campaign-name" title={c.name}>{c.name}</span> },
-    { key: 'brand', header: 'Advertiser', width: 150, sortable: true, render: c => <span className="cell-ellipsis cell-secondary" title={c.brand}>{c.brand}</span> },
-    { key: 'status', header: 'Status', width: 200, sortable: true, render: c => <StatusCell c={c} /> },
-    { key: 'flight', header: 'Flight', width: 132, sortable: true, render: c => <span className="cell-secondary">{c.m.fmt(0)} – {c.m.fmt(41)}</span> },
-    { key: 'guarantee', header: 'Guarantee', width: 88, align: 'right', sortable: true, render: c => <NumberCell value={c.guarantee.toFixed(1)} unit="M" /> },
     {
-      key: 'delivered',
-      header: 'Delivered',
-      width: 88,
-      align: 'right',
+      key: 'name',
+      header: 'Campaign',
+      width: 200,
       sortable: true,
+      // All advertisers: the advertiser is a muted second line, not a column.
       render: c => {
-        const { d } = barFor(c, period, 'M')
-        return d.hasData ? <NumberCell value={d.delivered.toFixed(1)} unit="M" /> : <NumberCell value="—" />
+        const name = <span className="cell-ellipsis campaign-name" title={c.name}>{c.name}</span>
+        return showBrand ? <TwoLineCell primary={name} secondary={<span className="cell-ellipsis" title={c.brand}>{c.brand}</span>} /> : name
       },
     },
-    { key: 'delivery', header: period === 'ftd' ? 'Delivery' : 'Delivery vs plan', sortable: true, render: c => <SegmentedProgressCell bar={barFor(c, period, 'M')} /> },
+    { key: 'status', header: 'Status', width: 168, sortable: true, render: c => <StatusCell c={c} /> },
+    { key: 'flight', header: 'Flight', width: 128, sortable: true, render: c => <span className="cell-secondary">{c.m.fmt(0)} – {c.m.fmt(41)}</span> },
+    { key: 'guarantee', header: 'Guarantee', width: 96, align: 'right', sortable: true, render: c => <NumberCell value={c.guarantee.toFixed(1)} unit="M" /> },
+    { key: 'delivery', header: period === 'ftd' ? 'Delivery' : 'Delivery vs plan', sortable: true, render: c => <SegmentedProgressCell bar={barFor(c, period)} windowed={period !== 'ftd'} /> },
     // Opens the drawer: a muted chevron says the row is a way in (the row itself is the button).
     { key: 'open', header: <span className="sr-only">Details</span>, width: 40, render: () => <span className="row-chevron" aria-hidden="true"><CaretRight /></span> },
   ]
 
   return (
     <Table
-      className="campaigns-table"
+      className={['campaigns-table', period !== 'ftd' && 'campaigns-table--windowed'].filter(Boolean).join(' ')}
       columns={columns}
       rows={rows}
       getRowKey={c => c.id}

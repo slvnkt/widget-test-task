@@ -27,10 +27,12 @@ function NavList({ items }: { items: NavLink[] }) {
   )
 }
 
-export function SideNav({ brand, items, footerItems }: { brand: string; items: NavLink[]; footerItems: NavLink[] }) {
+/** `account`: optional account / advertiser switcher under the wordmark. */
+export function SideNav({ brand, account, items, footerItems }: { brand: string; account?: ReactNode; items: NavLink[]; footerItems: NavLink[] }) {
   return (
     <aside className="sidenav">
       <p className="sidenav__brand">{brand}</p>
+      {account && <div className="sidenav__account">{account}</div>}
       <nav className="sidenav__nav" aria-label="Main">
         <NavList items={items} />
       </nav>

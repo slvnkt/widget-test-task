@@ -3,13 +3,13 @@ import { CalendarBlank, ChartLine, GearSix, House, Question, Receipt, Television
 import { Card } from '@ds/components/Card'
 import { Select } from '@ds/components/Select'
 import type { TableSort } from '@ds/components/Table'
-import { CampaignsCard, type ListState, type ViewMode } from './campaigns/CampaignsCard'
+import { CampaignsCard, type ListState } from './campaigns/CampaignsCard'
 import { rowLabel } from './campaigns/CampaignsTable'
 import { isStatusFilter, matchesStatus, type StatusFilter } from './campaigns/filter'
 import { sortCampaigns } from './campaigns/sort'
 import { CAMPAIGN, dateOf, fmtM } from './data/campaign'
 import { isPeriod, type Period } from './data/period'
-import { CAMPAIGNS, type Campaign } from './data/rows'
+import { ADVERTISERS, CAMPAIGNS, type Campaign } from './data/rows'
 import { Drawer } from './shell/Drawer'
 import { PageHeader } from './shell/PageHeader'
 import { SideNav, type NavLink } from './shell/SideNav'
@@ -41,25 +41,33 @@ const PROTO_OPTIONS: Array<{ value: ProtoState; label: string }> = [
 const LIST_STATE: Record<ProtoState, ListState> = { live: 'ready', loading: 'loading', error: 'error', empty: 'empty', 'details-loading': 'ready', 'details-error': 'ready' }
 const DETAILS_STATE: Partial<Record<ProtoState, DetailsState>> = { 'details-loading': 'loading', 'details-error': 'error' }
 
-/** `#period=7d&status=live&view=chart&campaign=northwind`; defaults (Flight to date, all statuses, table, no drawer) are omitted. Unknown values are dropped. */
+// Account scope: brand marketers see one advertiser; agency users and Simulmedia AMs can pick All advertisers.
+const ALL = 'all'
+const DEFAULT_ADVERTISER = ADVERTISERS[0] // Northwind Coffee
+const slug = (brand: string) => brand.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+const ADVERTISER_OPTIONS = [...ADVERTISERS.map(b => ({ value: slug(b), label: b })), { value: ALL, label: 'All advertisers' }]
+const advertiserName = (value: string) => ADVERTISERS.find(b => slug(b) === value)
+
+/** `#advertiser=all&period=7d&status=live&campaign=northwind`; defaults (Northwind, Flight to date, all statuses, no drawer) are omitted. Unknown values (and the old `view`) are dropped. */
 function readHash() {
   const q = new URLSearchParams(location.hash.slice(1))
+  const advertiser = q.get('advertiser') ?? ''
   const period = q.get('period')
   const status = q.get('status')
   const id = q.get('campaign')
   return {
+    advertiser: advertiser === ALL || advertiserName(advertiser) ? advertiser : slug(DEFAULT_ADVERTISER),
     period: isPeriod(period) ? period : ('ftd' as Period),
     status: isStatusFilter(status) ? status : ('all' as StatusFilter),
-    view: (q.get('view') === 'chart' ? 'chart' : 'table') as ViewMode,
     campaignId: CAMPAIGNS.some(c => c.id === id) ? id : null,
   }
 }
 
-function writeHash(period: Period, status: StatusFilter, view: ViewMode, campaignId: string | null) {
+function writeHash(advertiser: string, period: Period, status: StatusFilter, campaignId: string | null) {
   const q = new URLSearchParams()
+  if (advertiser !== slug(DEFAULT_ADVERTISER)) q.set('advertiser', advertiser)
   if (period !== 'ftd') q.set('period', period)
   if (status !== 'all') q.set('status', status)
-  if (view !== 'table') q.set('view', view)
   if (campaignId) q.set('campaign', campaignId)
   const hash = q.toString()
   history.replaceState(null, '', hash ? `#${hash}` : location.pathname + location.search)
@@ -77,32 +85,36 @@ function description(c: Campaign) {
 
 export function App() {
   const initial = useMemo(readHash, [])
+  const [advertiser, setAdvertiser] = useState(initial.advertiser)
   const [period, setPeriod] = useState<Period>(initial.period)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initial.status)
-  const [view, setView] = useState<ViewMode>(initial.view)
   const [campaignId, setCampaignId] = useState<string | null>(initial.campaignId)
   const [sort, setSort] = useState<TableSort | null>(null)
   const [proto, setProto] = useState<ProtoState>('live')
   const titleRef = useRef<HTMLHeadingElement>(null)
   const returnTo = useRef<string | null>(null)
 
-  const rows = useMemo(() => sortCampaigns(CAMPAIGNS.filter(c => matchesStatus(c, statusFilter)), sort, period), [sort, period, statusFilter])
+  const brand = advertiserName(advertiser) // undefined = All advertisers
+  const rows = useMemo(
+    () => sortCampaigns(CAMPAIGNS.filter(c => (!brand || c.brand === brand) && matchesStatus(c, statusFilter)), sort, period),
+    [brand, sort, period, statusFilter],
+  )
   const campaign = CAMPAIGNS.find(c => c.id === campaignId) ?? null
 
-  useEffect(() => writeHash(period, statusFilter, view, campaignId), [period, statusFilter, view, campaignId])
+  useEffect(() => writeHash(advertiser, period, statusFilter, campaignId), [advertiser, period, statusFilter, campaignId])
   useEffect(() => {
     const on = () => {
       const h = readHash()
+      setAdvertiser(h.advertiser)
       setPeriod(h.period)
       setStatusFilter(h.status)
-      setView(h.view)
       setCampaignId(h.campaignId)
     }
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
 
-  // Open or swap: focus the drawer title. Close: focus the row that opened it, in the current view.
+  // Open or swap: focus the drawer title. Close: focus the row that opened it.
   useLayoutEffect(() => {
     if (campaignId) {
       titleRef.current?.focus()
@@ -112,7 +124,7 @@ export function App() {
     returnTo.current = null
     const c = CAMPAIGNS.find(x => x.id === id)
     if (!c) return
-    const row = document.querySelector<HTMLElement>(`[data-campaign="${c.id}"], .campaigns-table tr[aria-label="${CSS.escape(rowLabel(c))}"]`)
+    const row = document.querySelector<HTMLElement>(`.campaigns-table tr[aria-label="${CSS.escape(rowLabel(c))}"]`)
     row?.focus()
   }, [campaignId])
 
@@ -126,10 +138,15 @@ export function App() {
 
   return (
     <div className="app">
-      <SideNav brand="Simulmedia TV+" items={NAV} footerItems={NAV_FOOTER} />
+      <SideNav
+        brand="Simulmedia TV+"
+        account={<Select size="sm" label="Advertiser" value={advertiser} onValueChange={setAdvertiser} options={ADVERTISER_OPTIONS} />}
+        items={NAV}
+        footerItems={NAV_FOOTER}
+      />
 
       <main className="main">
-        <PageHeader title="Campaigns" />
+        <PageHeader title="Campaigns" description={brand} />
         <CampaignsCard
           rows={rows}
           state={LIST_STATE[proto]}
@@ -137,8 +154,7 @@ export function App() {
           onPeriodChange={setPeriod}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          view={view}
-          onViewChange={setView}
+          showBrand={!brand}
           sort={sort}
           onSortChange={setSort}
           selectedId={campaignId}

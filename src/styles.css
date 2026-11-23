@@ -23,11 +23,11 @@ p { text-wrap: pretty; }
   min-height: 100vh;
 }
 .app {
-  /* Room under page and drawer content so the floating prototype control never covers the last rows. */
-  --proto-clearance: calc(var(--ot-space-4) * 2 + 64px); /* compact control height, prototype only, no token */
+  /* The prototype control sits at the bottom of the sidebar; the sidebar keeps this much room for it. */
+  --proto-height: 64px; /* compact control height, prototype only, no token */
 }
 .main {
-  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--proto-clearance);
+  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-space-8);
   min-width: 0;
 }
 
@@ -39,6 +39,7 @@ p { text-wrap: pretty; }
   display: flex;
   flex-direction: column;
   padding: var(--ot-spacing-padding-lg);
+  padding-bottom: calc(var(--ot-spacing-padding-lg) * 2 + var(--proto-height));
   background: var(--ot-color-bg-primary);
   border-right: var(--ot-shape-border-width-sm) solid var(--ot-color-border-primary);
 }
@@ -49,6 +50,7 @@ p { text-wrap: pretty; }
   line-height: var(--ot-typography-heading-sm-line-height);
   font-weight: var(--ot-typography-heading-sm-font-weight);
 }
+.sidenav__account { margin-bottom: var(--ot-spacing-gap-xl); }
 .sidenav__footer { margin-top: auto; }
 .sidenav__list {
   display: flex;
@@ -143,7 +145,6 @@ p { text-wrap: pretty; }
   white-space: nowrap;
 }
 .campaigns { gap: var(--ot-spacing-gap-lg); }
-.campaigns .ot-card__header { align-items: center; }
 .campaigns__filters {
   display: flex;
   flex-wrap: wrap;
@@ -156,19 +157,15 @@ p { text-wrap: pretty; }
   gap: var(--ot-spacing-gap-md);
 }
 /* Fixed min-height = table height (32 head + 13 × 40 rows), so the card doesn't jump between views and states. */
-.campaigns__body {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: calc(var(--ot-table-size-sm-row-height) + 13 * var(--ot-table-size-md-row-height));
-}
-.campaigns__body > .ot-table-wrap { align-self: stretch; margin-bottom: auto; }
-.campaigns__body > .cchart { margin-bottom: auto; }
+.campaigns__body { display: flex; flex-direction: column; }
 .campaigns__legend { display: flex; }
 
 .campaigns-table .ot-table { table-layout: fixed; }
 /* Fixed-width % text so every bar has the same length and the guarantee lines align ("103%" is wider than 4ch). */
-.campaigns-table .ot-table-progress__value { flex: none; width: 5ch; }
+/* Fixed-width value ("55.1 M · 102%") so every bar has the same length and the guarantee lines align. */
+.campaigns-table .ot-table-progress__value { flex: none; width: 12ch; white-space: nowrap; }
+.campaigns-table--windowed .ot-table-progress__value { width: 19ch; }
+.delivery-value { color: var(--ot-color-text-primary); }
 .cell-ellipsis {
   display: block;
   overflow: hidden;
@@ -180,8 +177,7 @@ p { text-wrap: pretty; }
   color: var(--ot-color-text-link);
   font-weight: var(--ot-font-weight-medium);
 }
-.campaigns-table tbody tr:hover .campaign-name,
-.cchart__row:hover .campaign-name {
+.campaigns-table tbody tr:hover .campaign-name {
   color: var(--ot-color-text-link-hover);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -195,111 +191,19 @@ p { text-wrap: pretty; }
   height: var(--ot-table-sort-icon-size);
 }
 .cell-secondary { color: var(--ot-color-text-secondary); white-space: nowrap; }
+/* The data word drops under the badge when the column is narrow, instead of widening it. */
 .status-cell {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--ot-spacing-gap-sm);
+  gap: 0 var(--ot-spacing-gap-sm);
+  padding-block: var(--ot-spacing-padding-xs);
   white-space: nowrap;
 }
 .status-cell__marker {
   color: var(--ot-color-text-secondary);
   font-size: var(--ot-typography-body-sm-font-size);
   line-height: var(--ot-typography-body-sm-line-height);
-}
-
-/* ── Chart view ── */
-.cchart {
-  --_pad: var(--ot-table-cell-padding-x);
-  --_label: 340px; /* from the handoff, no token */
-  --_value: 64px; /* from the handoff, no token */
-  --_chevron: var(--ot-table-sort-icon-size);
-  --_gap: var(--ot-spacing-gap-lg);
-  display: flex;
-  flex-direction: column;
-}
-.cchart__rows { margin: 0; padding: 0; list-style: none; }
-.cchart__axis,
-.cchart__row {
-  display: grid;
-  grid-template-columns: var(--_label) minmax(0, 1fr) var(--_value) var(--_chevron);
-  align-items: center;
-  column-gap: var(--_gap);
-  padding-inline: var(--_pad);
-}
-.cchart__axis {
-  height: var(--ot-table-size-sm-row-height);
-  color: var(--ot-color-text-secondary);
-  font-size: var(--ot-typography-label-sm-font-size);
-  line-height: var(--ot-typography-label-sm-line-height);
-  font-weight: var(--ot-typography-label-sm-font-weight);
-}
-.cchart__bar {
-  position: relative;
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-.cchart__bar > .ot-progress { position: relative; }
-.cchart__tick {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-}
-.cchart__tick--start { transform: translate(0, -50%); }
-.cchart__gridline {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--ot-shape-border-width-sm);
-  background: var(--ot-color-chart-grid);
-}
-.cchart__anchor { display: flex; width: 100%; }
-/* Tooltip anchored at the bar end instead of the row centre. */
-.cchart__anchor > .ot-tooltip--top,
-.cchart__anchor > .ot-tooltip--bottom {
-  left: calc(var(--_pad) + var(--_label) + var(--_gap) + (100% - 2 * var(--_pad) - var(--_label) - var(--_value) - var(--_chevron) - 3 * var(--_gap)) * var(--_t));
-}
-.cchart__row {
-  width: 100%;
-  height: var(--ot-table-size-md-row-height);
-  margin: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ot-color-text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.cchart__row:hover { background: var(--ot-color-bg-subtle-hover); }
-.cchart__row[data-selected] { background: var(--ot-color-brand-secondary); }
-.cchart__row:focus { outline: none; }
-.cchart__row:focus-visible {
-  background: var(--ot-color-bg-subtle-hover);
-  box-shadow: inset 0 0 0 var(--ot-table-focus-ring-width) var(--ot-color-border-focus);
-}
-.cchart__row--skeleton { cursor: default; }
-.cchart__row--skeleton:hover { background: transparent; }
-.cchart__label {
-  display: flex;
-  align-items: center;
-  gap: var(--ot-spacing-gap-sm);
-  min-width: 0;
-}
-.cchart__name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cchart__value {
-  color: var(--ot-color-text-secondary);
-  font-size: var(--ot-typography-body-sm-font-size);
-  line-height: var(--ot-typography-body-sm-line-height);
-  text-align: right;
 }
 
 /* ── Drawer (TEMP stand-in) ── */
@@ -349,7 +253,7 @@ p { text-wrap: pretty; }
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--ot-spacing-padding-xl) var(--ot-spacing-padding-xl) var(--proto-clearance);
+  padding: var(--ot-spacing-padding-xl);
 }
 
 /* ── Delivery widget (drawer body) ── */
@@ -443,12 +347,13 @@ p { text-wrap: pretty; }
 .chart .ot-tooltip { font-variant-numeric: tabular-nums; }
 
 /* ── Prototype control (not product UI) ── */
+/* Bottom-left, inside the sidebar's reserved space: never over the table or the drawer. */
 .proto {
   position: fixed;
-  right: var(--ot-space-4);
-  bottom: var(--ot-space-4);
+  left: var(--ot-spacing-padding-lg);
+  bottom: var(--ot-spacing-padding-lg);
   z-index: 30;
-  width: 240px; /* from the handoff, no token */
+  width: calc(240px - 2 * var(--ot-spacing-padding-lg)); /* sidebar width, no token */
   box-shadow: var(--ot-shadow-md);
 }
 /* The DS listbox opens downward; at the bottom of the viewport it must open upward and scroll. */

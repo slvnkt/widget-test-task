@@ -3,7 +3,7 @@
 import { Progress } from '@ds/components/Progress'
 import type { Bar } from './bar'
 
-export function SegmentedProgressCell({ bar }: { bar: Bar }) {
+export function SegmentedProgressCell({ bar, windowed }: { bar: Bar; windowed?: boolean }) {
   return (
     <span className="ot-table-progress">
       <Progress
@@ -16,7 +16,14 @@ export function SegmentedProgressCell({ bar }: { bar: Bar }) {
         showMarkerLabels={false}
         ariaLabel={bar.aria}
       />
-      <span className="ot-table-progress__value" aria-hidden="true">{bar.pct === null ? '—' : `${bar.pct}%`}</span>
+      {/* Delivered and % in one value: "17.9 M · 37%", or "6.2 M · 102% of plan" for a window. */}
+      <span className="ot-table-progress__value" aria-hidden="true">
+        {bar.pct === null ? '—' : (
+          <>
+            <span className="delivery-value">{bar.d.delivered.toFixed(1)} M</span> · {bar.pct}%{windowed ? ' of plan' : ''}
+          </>
+        )}
+      </span>
     </span>
   )
 }

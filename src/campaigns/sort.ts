@@ -1,4 +1,4 @@
-// One sort for both views: the chart view follows the table's current sort (it has no sort UI).
+// Table sort (controlled, so rows arrive pre-sorted). The Delivery column sorts by % of target.
 import type { TableSort } from '@ds/components/Table'
 import type { Period } from '../data/period'
 import type { Campaign } from '../data/rows'
@@ -9,18 +9,12 @@ const byName = (a: Campaign, b: Campaign) => a.name.localeCompare(b.name)
 
 export function sortCampaigns(rows: Campaign[], sort: TableSort | null, period: Period): Campaign[] {
   if (!sort) return rows
-  const delivered = (c: Campaign) => {
-    const { d } = barFor(c, period, 'M')
-    return d.hasData ? d.delivered : -1
-  }
-  const pct = (c: Campaign) => barFor(c, period, 'M').pct ?? -1
+  const pct = (c: Campaign) => barFor(c, period).pct ?? -1
   const compare: Record<string, (a: Campaign, b: Campaign) => number> = {
     name: byName,
-    brand: (a, b) => a.brand.localeCompare(b.brand),
     status: (a, b) => STATUS_BADGE[a.m.status].rank - STATUS_BADGE[b.m.status].rank || byName(a, b),
     flight: (a, b) => a.startOffset - b.startOffset,
     guarantee: (a, b) => a.guarantee - b.guarantee,
-    delivered: (a, b) => delivered(a) - delivered(b),
     delivery: (a, b) => pct(a) - pct(b),
   }
   const fn = compare[sort.key] ?? (() => 0)
