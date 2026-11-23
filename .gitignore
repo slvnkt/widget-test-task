@@ -6,3 +6,5 @@ dist/
 # Working docs, local only
 *.md
 !README.md
+.deploy/
+.github/
