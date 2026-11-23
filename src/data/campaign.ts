@@ -203,11 +203,17 @@ export function buildModel(def: ScenarioDef): Model {
 
   const logsReceived = def.logsReceived ?? 0
   const late = def.lateNetworks ?? 0
-  const perNet = spotsPlannedToDate / CAMPAIGN.networks
+  // Split spotsPlannedToDate across networks by weight (largest remainder), so the table sums to tile 3.
+  const netW = NETWORK_NAMES.map((_, i) => 0.7 + ((i * 37) % 60) / 100)
+  const netWSum = netW.reduce((a, b) => a + b, 0)
+  const rawShare = netW.map(w => (spotsPlannedToDate * w) / netWSum)
+  const netSpots = rawShare.map(Math.floor)
+  const leftover = spotsPlannedToDate - netSpots.reduce((a, b) => a + b, 0)
+  rawShare.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac).slice(0, leftover).forEach(({ i }) => netSpots[i]++)
   const rank = { late: 0, pending: 1, received: 2 } as const
   const networks: Model['networks'] = NETWORK_NAMES.map((name, i): Model['networks'][number] => {
-    const scheduled = Math.round(perNet * (0.7 + ((i * 37) % 60) / 100))
-    const pre = i < preempted ? 1 : 0
+    const scheduled = netSpots[i]
+    const pre = i < preempted ? Math.min(1, scheduled) : 0
     if (i >= CAMPAIGN.networks - late) return { name, status: 'late', through: 'No logs since Nov 2', aired: scheduled - pre, scheduled, preempted: pre }
     if (i >= logsReceived) return { name, status: 'pending', through: confirmedThrough >= 3 ? `${fmtDay(confirmedThrough - 3)} · usually 5–10 days` : 'Expected in 5–10 days', aired: scheduled - pre, scheduled, preempted: pre }
     return { name, status: 'received', through: fmtDay(confirmedThrough), aired: scheduled - pre, scheduled, preempted: pre }
