@@ -51,8 +51,8 @@ const PROTO_OPTIONS: Array<{ value: ProtoState; label: string }> = [
   { value: 'error', label: 'Error' },
   { value: 'empty', label: 'No campaigns' },
   { value: 'stale', label: "Couldn't refresh" },
-  { value: 'details-loading', label: 'Campaign details loading' },
-  { value: 'details-error', label: 'Campaign details error' },
+  { value: 'details-loading', label: 'Details loading' },
+  { value: 'details-error', label: 'Details error' },
 ]
 const LIST_STATE: Record<ProtoState, ListState> = { live: 'ready', loading: 'loading', error: 'error', empty: 'empty', stale: 'stale', 'details-loading': 'ready', 'details-error': 'ready' }
 const DETAILS_STATE: Partial<Record<ProtoState, DetailsState>> = { 'details-loading': 'loading', 'details-error': 'error' }
