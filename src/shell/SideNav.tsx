@@ -31,13 +31,19 @@ function NavList({ items }: { items: NavLink[] }) {
   )
 }
 
-/**
- * Floating panel of stacked blocks: account (wordmark, `brandAction` e.g. theme toggle, `account` switcher), navigation,
- * and an optional `bottom` block (the prototype control).
- */
-export function SideNav({ brand, brandAction, account, items, footerItems, bottom }: {
+/** iOS-style app icon: navy rounded square with a white chevron mark. */
+function AppIcon() {
+  return (
+    <svg className="sidenav__logo" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="var(--ot-palette-navy-900)" />
+      <path d="M13 9.5 19.5 16 13 22.5" fill="none" stroke="var(--ot-palette-white)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Sidebar on the page canvas: logo + name, `account` switcher, navigation, and a `bottom` slot (prototype control, theme). */
+export function SideNav({ brand, account, items, footerItems, bottom }: {
   brand: string
-  brandAction?: ReactNode
   account?: ReactNode
   items: NavLink[]
   footerItems: NavLink[]
@@ -45,20 +51,18 @@ export function SideNav({ brand, brandAction, account, items, footerItems, botto
 }) {
   return (
     <aside className="sidenav">
-      <div className="sidenav__block sidenav__block--surface">
-        <div className="sidenav__brand-row">
-          <p className="sidenav__brand">{brand}</p>
-          {brandAction}
-        </div>
-        {account}
+      <div className="sidenav__brand-row">
+        <AppIcon />
+        <p className="sidenav__brand">{brand}</p>
       </div>
+      {account}
       <nav className="sidenav__nav" aria-label="Main">
         <NavList items={items} />
       </nav>
       <nav className="sidenav__footer" aria-label="Help and settings">
         <NavList items={footerItems} />
       </nav>
-      {bottom && <div className="sidenav__block sidenav__block--surface">{bottom}</div>}
+      {bottom && <div className="sidenav__bottom">{bottom}</div>}
     </aside>
   )
 }

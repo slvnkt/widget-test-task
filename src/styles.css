@@ -50,14 +50,13 @@ p { text-wrap: pretty; }
   gap: var(--ot-spacing-gap-lg);
   /* Full-bleed across .main's side padding so scrolled rows never show at its edges. */
   margin-inline: calc(-1 * var(--ot-space-8));
-  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-space-3);
-  background: var(--ot-color-bg-secondary);
+  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-spacing-gap-xl); /* 24 below the filters, always, even while content scrolls under */
+  background: var(--ot-color-bg-secondary); /* opaque canvas */
 }
 .main {
-  /* Height of .page-top: padding 24 + title 32 + gap 16 + filter bar 32 + padding 12. The table head sticks under it. */
-  --page-top-height: calc(var(--ot-spacing-padding-xl) + var(--ot-typography-heading-lg-line-height) + var(--ot-spacing-gap-lg) + var(--ot-control-height-sm) + var(--ot-space-3));
+  /* Height of .page-top: padding 24 + title 32 + gap 16 + filter bar 32 + padding 24. The table head sticks under it. */
+  --page-top-height: calc(var(--ot-spacing-padding-xl) + var(--ot-typography-heading-lg-line-height) + var(--ot-spacing-gap-lg) + var(--ot-control-height-sm) + var(--ot-spacing-gap-xl));
 }
-.page-top + .campaigns { margin-top: var(--ot-space-3); } /* + 12 padding above = 24 (gap-xl) */
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -95,41 +94,48 @@ p { text-wrap: pretty; }
 .search__clear:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
 
 /* ── Sidebar (TEMP stand-in) ── */
-/* Floating panel on the canvas, inset 12 from top/left/bottom; blocks separated by space and soft inner surfaces. */
+/* Sidebar sits on the page canvas: no panel, border or shadow (reference: soft dashboard shell). */
 .sidenav {
   position: sticky;
-  top: var(--ot-space-3);
-  height: calc(100vh - 2 * var(--ot-space-3));
-  margin: var(--ot-space-3) 0 var(--ot-space-3) var(--ot-space-3);
+  top: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: var(--ot-spacing-gap-md);
-  padding: var(--ot-spacing-padding-md);
-  border-radius: var(--ot-card-radius);
-  background: var(--ot-color-bg-primary);
-  box-shadow: var(--ot-shadow-sm);
-}
-.sidenav__block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ot-spacing-gap-md);
-}
-/* Inner radius = panel radius − panel padding. */
-.sidenav__block--surface {
-  padding: var(--ot-spacing-padding-md);
-  border-radius: calc(var(--ot-card-radius) - var(--ot-spacing-padding-md));
-  background: var(--ot-color-bg-secondary);
+  gap: var(--ot-spacing-gap-lg);
+  padding: var(--ot-spacing-padding-xl);
 }
 .sidenav__brand-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--ot-spacing-gap-sm);
+  gap: var(--ot-spacing-gap-md);
 }
+.sidenav__logo { flex: none; }
 .sidenav__brand {
   font-size: var(--ot-typography-heading-sm-font-size);
   line-height: var(--ot-typography-heading-sm-line-height);
   font-weight: var(--ot-typography-heading-sm-font-weight);
+}
+.sidenav__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ot-spacing-gap-md);
+}
+.sidenav__bottom > .proto { align-self: stretch; }
+/* Theme toggle: vertical pill; active = raised circle. */
+.theme-pill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ot-spacing-gap-xs);
+  padding: var(--ot-spacing-padding-xs);
+  border-radius: var(--ot-shape-radius-full);
+  background: var(--ot-color-bg-tertiary);
+}
+.theme-pill .ot-icon-button { border-radius: var(--ot-shape-radius-full); color: var(--ot-color-text-secondary); }
+.theme-pill .ot-icon-button[aria-pressed='true'] {
+  background: var(--ot-color-bg-primary);
+  box-shadow: var(--ot-shadow-sm);
+  color: var(--ot-color-text-primary);
 }
 .sidenav__footer { margin-top: auto; }
 .sidenav__list {
@@ -166,8 +172,11 @@ p { text-wrap: pretty; }
 .sidenav__link--disabled .sidenav__icon { color: var(--ot-color-text-disabled); }
 .sidenav__link--disabled { cursor: default; }
 .sidenav__link--disabled:hover { background: none; }
+/* Active item: white pill on the canvas. */
 .sidenav__link[aria-current='page'] {
-  background: var(--ot-color-bg-tertiary);
+  background: var(--ot-color-bg-primary);
+  border-radius: var(--ot-shape-radius-lg);
+  box-shadow: var(--ot-shadow-sm);
   font-weight: var(--ot-font-weight-semibold);
 }
 .sidenav__link[aria-current='page'] .sidenav__icon { color: var(--ot-color-text-primary); }

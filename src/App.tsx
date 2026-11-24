@@ -204,22 +204,20 @@ export function App() {
     <div className="app">
       <SideNav
         brand="Simulmedia TV+"
-        brandAction={
-          <IconButton
-            variant="ghost"
-            size="sm"
-            icon={theme === 'dark' ? <Sun /> : <Moon />}
-            label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
-          />
-        }
         account={<Select size="sm" label="Advertiser" value={advertiser} onValueChange={setAdvertiser} options={ADVERTISER_OPTIONS} />}
         items={NAV}
         footerItems={NAV_FOOTER}
         bottom={
-          <div className="proto" role="group" aria-label="Prototype controls">
-            <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
-          </div>
+          <>
+            <div className="proto" role="group" aria-label="Prototype controls">
+              <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
+            </div>
+            {/* Vertical pill; the active theme's button is the raised circle. */}
+            <div className="theme-pill" role="group" aria-label="Theme">
+              <IconButton variant="ghost" size="sm" icon={<Moon />} label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} />
+              <IconButton variant="ghost" size="sm" icon={<Sun />} label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} />
+            </div>
+          </>
         }
       />
 
