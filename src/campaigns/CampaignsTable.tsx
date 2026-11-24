@@ -111,7 +111,8 @@ function GapHeader() {
     }
   }, [])
   return (
-    <Tooltip text={GAP_HINT} placement="bottom" open={focused || undefined}>
+    // Fixed below and right-aligned to the term (see .gap-header CSS): centred, it ran past the viewport edge and shifted the page.
+    <Tooltip text={GAP_HINT} placement="bottom" open={focused || undefined} anchorClassName="gap-header">
       <span ref={ref} className="ot-term">Gap<span className="sr-only">. {GAP_HINT}</span></span>
     </Tooltip>
   )

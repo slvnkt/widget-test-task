@@ -1,5 +1,5 @@
 import { useId, useLayoutEffect, useState } from 'react'
-import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, ReferenceLine, XAxis, YAxis } from 'recharts'
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { TooltipContent, type TooltipRow } from '@ds/components/Tooltip'
 import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 import { ChartContainer, ChartTooltip, type ChartConfig } from './chart'
@@ -8,12 +8,11 @@ import { signedM } from './copy'
 const HEIGHT = 240
 // At the drawer's ~630px plot, ticks every two weeks (weekly ticks would crowd).
 const X_TICK_DAYS = [0, 14, 28, CAMPAIGN.flightDays - 1]
-const PLAN_LABEL_DAY = 28
 
-/** Round steps (5 / 10 / 20M), 4–6 ticks covering the goal and the forecast; the goal line carries its own label. */
+/** Round steps, at most 3 intervals (4 grid lines) covering the goal and the forecast; the goal line carries its own label. */
 function yTicks(top: number) {
-  const step = [5, 10, 20, 50].find(s => Math.ceil(top / s) <= 5) ?? 50
-  const n = Math.max(3, Math.ceil(top / step))
+  const step = [5, 10, 20, 25, 50, 100].find(s => Math.ceil(top / s) <= 3) ?? 100
+  const n = Math.max(2, Math.ceil(top / step))
   return { ticks: Array.from({ length: n + 1 }, (_, i) => i * step), max: n * step }
 }
 
@@ -115,10 +114,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
   const hatchId = useId()
   const hatch = useHatchSize()
   const data = withBand(m)
-  const lastConfirmed = [...data].reverse().find(r => r.confirmed !== undefined)
-  const lastPrelim = m.prelim > 0 ? [...data].reverse().find(r => r.prelim !== undefined) : undefined
   const last = data[data.length - 1]
-  const planAt = data[PLAN_LABEL_DAY]
   const xTicks = X_TICK_DAYS.map(d => data[d].label)
   const yAxis = yTicks(Math.max(m.guarantee * 1.1, m.projHigh, m.delivered))
   // Paused: a "Paused" line at the stop day replaces "Today".
@@ -127,28 +123,10 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
     : data.some(r => r.label === m.todayLabel) ? { x: m.todayLabel, text: 'Today', day: m.def.today } : null
   // Today/Paused near the left edge would run into "Goal …": move the goal label to the right end.
   const goalAtEnd = !!vLine && vLine.day < 10
-  // Forecast label: below the band when the band ends under the goal, else above it; nudged only if within 14px of the goal line.
-  // Plot height = chart height − top margin − default XAxis height (30), to turn millions into pixels.
-  const pxPerM = (HEIGHT - 24 - 30) / yAxis.max
-  let forecast: { y: number; dy: number } | null = null
-  if (last.band) {
-    if (last.band[1] < m.guarantee) forecast = { y: last.band[0], dy: 14 }
-    else {
-      const dy = -8
-      const aboveGoal = (last.band[1] - m.guarantee) * pxPerM - dy // label baseline height above the goal line, px
-      forecast = { y: last.band[1], dy: aboveGoal < 14 ? dy - (14 - aboveGoal) : dy }
-    }
-  }
   const step = hatch.width + hatch.gap
-  // End-anchored data labels would clip at the left edge in the first days of a flight: read them to the right instead.
-  // Lifted clear of the plan line, which rises under a right-reading label.
-  const inward = (day: number) => (day < 10 ? { anchor: 'start' as const, dx: 6, dy: -28 } : {})
-  // Confirmed and preliminary ends a few days apart: lift the preliminary label above the confirmed one.
-  const prelimStacked = !!lastPrelim && !!lastConfirmed && lastPrelim.day - lastConfirmed.day <= 4
-  // Confirmed end just under the goal line with preliminary still to come: label inside the fill, below the line.
-  const confirmedBelow = !!lastPrelim && lastConfirmed?.confirmed !== undefined && m.guarantee - lastConfirmed.confirmed < m.guarantee * 0.2
 
   return (
+    <>
     <ChartContainer config={config} height={HEIGHT}>
       <ComposedChart data={data} margin={{ top: 24, right: 8, bottom: 0, left: 0 }}>
         <defs>
@@ -156,7 +134,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
             <rect width={hatch.width} height={step} style={{ fill: 'var(--ot-pattern-hatch-color)' }} />
           </pattern>
         </defs>
-        <CartesianGrid vertical={false} stroke="var(--ot-color-chart-grid)" strokeWidth={1} />
+        <CartesianGrid vertical={false} horizontal stroke="var(--ot-color-chart-grid)" strokeWidth={1} />
         {area && (
           <ReferenceArea x1={data[area.x1].label} x2={data[area.x2].label} fill="var(--ot-color-bg-subtle-hover)" fillOpacity={1} stroke="none" label={<AreaLabel text={areaLabel ?? ''} />} />
         )}
@@ -178,18 +156,14 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
           <ReferenceLine x={vLine.x} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={vLine.text} anchor="middle" dy={-8} tone="primary" />} />
         )}
 
-        {planAt && m.phase !== 'finalized' && <ReferenceDot x={planAt.label} y={planAt.plan} r={0} label={<DirectLabel text="Plan" anchor="middle" dy={16} />} />}
-        {lastConfirmed?.confirmed !== undefined && (
-          <ReferenceDot x={lastConfirmed.label} y={lastConfirmed.confirmed} r={0} label={<DirectLabel text={`Confirmed ${fmtM(m.confirmed)}`} dy={confirmedBelow ? 22 : -10} tone="primary" {...inward(lastConfirmed.day)} />} />
-        )}
-        {lastPrelim?.prelim !== undefined && (
-          <ReferenceDot x={lastPrelim.label} y={lastPrelim.prelim} r={0} label={<DirectLabel text={`Preliminary ${m.confirmed > 0 ? signedM(m.prelim) : fmtM(m.prelim)}`} dy={prelimStacked ? -26 : -10} tone="primary" {...inward(lastPrelim.day)} />} />
-        )}
-        {/* Right-aligned at flight end. */}
-        {forecast && (
-          <ReferenceDot x={last.label} y={forecast.y} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={forecast.dy} type="body" />} />
-        )}
       </ComposedChart>
     </ChartContainer>
+    <ul className="chart-legend" aria-label="Legend">
+      {m.confirmed > 0 && <li><span className="chart-legend__swatch chart-legend__swatch--confirmed" aria-hidden="true" />Confirmed</li>}
+      {m.prelim > 0 && <li><span className="chart-legend__swatch chart-legend__swatch--prelim" aria-hidden="true" />Preliminary</li>}
+      <li><span className="chart-legend__swatch chart-legend__swatch--plan" aria-hidden="true" />Plan</li>
+      {last.band && <li><span className="chart-legend__swatch chart-legend__swatch--forecast" aria-hidden="true" />Forecast {m.projLow.toFixed(1)}–{fmtM(m.projHigh)}</li>}
+    </ul>
+    </>
   )
 }

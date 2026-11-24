@@ -135,6 +135,11 @@ p { text-wrap: pretty; }
 }
 .sidenav__icon > svg { width: 100%; height: 100%; }
 .sidenav__link:hover { background: var(--ot-color-bg-hover); }
+/* Sections that don't exist in the prototype: quiet, no hover, not focusable (no href). */
+.sidenav__link--disabled,
+.sidenav__link--disabled .sidenav__icon { color: var(--ot-color-text-disabled); }
+.sidenav__link--disabled { cursor: default; }
+.sidenav__link--disabled:hover { background: none; }
 .sidenav__link[aria-current='page'] {
   background: var(--ot-color-bg-tertiary);
   font-weight: var(--ot-font-weight-semibold);
@@ -386,20 +391,14 @@ p { text-wrap: pretty; }
 /* ── Delivery widget (drawer body) ── */
 .delivery { display: flex; flex-direction: column; }
 
-/* KPI strip as 2×2: tile 1 | tile 2 / tile 3 | tile 4 */
+/* KPI tiles: 2×2 outlined cards, equal heights. */
 .kpis {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ot-spacing-gap-md);
+  padding-top: var(--ot-spacing-gap-sm);
 }
-.kpis > .ot-divider--vertical { align-self: stretch; }
-.kpis__row-divider { grid-column: 1 / -1; }
-/* 16 block; column 1 gets 24 right, column 2 gets 24 left. */
-.kpis__cell {
-  min-width: 0;
-  padding: var(--ot-spacing-padding-lg) var(--ot-spacing-padding-xl) var(--ot-spacing-padding-lg) 0;
-}
-.kpis__cell:nth-child(3), .kpis__cell:nth-child(7) { padding: var(--ot-spacing-padding-lg) 0 var(--ot-spacing-padding-lg) var(--ot-spacing-padding-xl); }
+.kpis__card { min-width: 0; }
 .kpis .ot-stat__secondary {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -417,13 +416,56 @@ p { text-wrap: pretty; }
   font-size: var(--ot-typography-body-sm-font-size);
   line-height: var(--ot-typography-body-sm-line-height);
 }
-.delivery__chart-title {
-  margin-top: var(--ot-spacing-gap-xl);
-  margin-bottom: var(--ot-spacing-gap-sm);
-  font-size: var(--ot-typography-label-md-font-size);
-  line-height: var(--ot-typography-label-md-line-height);
-  font-weight: var(--ot-typography-label-md-font-weight);
+.delivery > .delivery__chart { /* beats the DS card margin reset */
+  margin-top: var(--ot-spacing-gap-md);
+  gap: var(--ot-spacing-gap-md);
 }
+
+/* Chart legend (replaces the direct series labels): solid fill, hatch, dotted line, dashed line + band. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ot-spacing-gap-xs) var(--ot-spacing-gap-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+  font-variant-numeric: tabular-nums;
+}
+.chart-legend li { display: inline-flex; align-items: center; gap: var(--ot-spacing-gap-sm); }
+.chart-legend__swatch {
+  position: relative;
+  flex: none;
+  width: var(--ot-space-4);
+  height: var(--ot-space-3);
+}
+.chart-legend__swatch--confirmed {
+  background: var(--ot-color-data-track);
+  border-top: var(--ot-shape-border-width-md) solid var(--ot-color-data-confirmed);
+}
+.chart-legend__swatch--prelim {
+  background: repeating-linear-gradient(-45deg, var(--ot-pattern-hatch-color) 0 var(--ot-pattern-hatch-width), transparent var(--ot-pattern-hatch-width) calc(var(--ot-pattern-hatch-width) + var(--ot-pattern-hatch-gap)));
+  border-top: var(--ot-shape-border-width-md) dashed var(--ot-color-data-preliminary);
+}
+.chart-legend__swatch--plan::after,
+.chart-legend__swatch--forecast::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  transform: translateY(-50%);
+}
+.chart-legend__swatch--plan::after { border-top: var(--ot-shape-border-width-md) dotted var(--ot-color-chart-3); }
+.chart-legend__swatch--forecast { background: var(--ot-color-bg-tertiary); }
+.chart-legend__swatch--forecast::after { border-top: var(--ot-shape-border-width-md) dashed var(--ot-color-data-projected); }
+
+/* Gap header tooltip: fixed below, right-aligned to the term, so it stays inside the viewport and never shifts. */
+.gap-header .ot-tooltip--floating { left: auto; right: 0; transform: none; }
+.gap-header .ot-tooltip__arrow { left: auto !important; right: calc(var(--ot-space-3) - 4px); }
+
+/* Sources: info tooltips open upward and are not clipped by (or scrolled inside) the table wrap. */
+.details__sources.ot-table-wrap { overflow: visible; }
 .details { margin-top: var(--ot-spacing-gap-xl); }
 .details .ot-tabs__panel { padding-top: var(--ot-spacing-gap-lg); }
 

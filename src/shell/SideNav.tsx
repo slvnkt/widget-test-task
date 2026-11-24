@@ -1,6 +1,6 @@
 // TEMP stand-in until Omnitaki DS ships SideNav; replace then.
 // Rows follow the ListItem look (size md, list-item tokens) but are real links with aria-current.
-import type { MouseEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export interface NavLink {
   label: string
@@ -9,15 +9,19 @@ export interface NavLink {
   current?: boolean
 }
 
-// Prototype: the other sections do not exist, so links stay on the page.
-const stay = (e: MouseEvent) => e.preventDefault()
+// Prototype: the other sections do not exist, so they render disabled (no href: not focusable, no hover).
 
 function NavList({ items }: { items: NavLink[] }) {
   return (
     <ul className="sidenav__list">
       {items.map(item => (
         <li key={item.label}>
-          <a className="sidenav__link" href={item.href} aria-current={item.current ? 'page' : undefined} onClick={stay}>
+          <a
+            className={['sidenav__link', !item.current && 'sidenav__link--disabled'].filter(Boolean).join(' ')}
+            href={item.current ? item.href : undefined}
+            aria-current={item.current ? 'page' : undefined}
+            aria-disabled={item.current ? undefined : true}
+          >
             <span className="sidenav__icon" aria-hidden="true">{item.icon}</span>
             {item.label}
           </a>

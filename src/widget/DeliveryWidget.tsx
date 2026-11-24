@@ -1,7 +1,7 @@
 // Single-campaign delivery widget, rendered as the Campaigns drawer body (the drawer is the container: no Card).
 import type { ReactNode } from 'react'
 import { Button } from '@ds/components/Button'
-import { Divider } from '@ds/components/Divider'
+import { Card, CardHeader } from '@ds/components/Card'
 import { EmptyState } from '@ds/components/EmptyState'
 import { Skeleton } from '@ds/components/Skeleton'
 import { Stat, type StatProps } from '@ds/components/Stat'
@@ -108,22 +108,26 @@ function tile4(m: Model, period: Period): StatProps {
   return { label: 'Network logs', value: m.logsReceived, unit: `/ ${m.networksTotal}`, secondary: flightLevel(period, secondary), hint: HINTS.logs }
 }
 
+// 2×2 outlined cards, equal heights (grid rows stretch).
 function Kpis({ tiles }: { tiles: StatProps[] }) {
-  const cell = (t: StatProps, i: number) => (
-    <div className="kpis__cell" key={i}>
-      <Stat size="md" {...t} />
-    </div>
-  )
   return (
     <div className="kpis">
-      {cell(tiles[0], 0)}
-      <Divider orientation="vertical" />
-      {cell(tiles[1], 1)}
-      <Divider className="kpis__row-divider" />
-      {cell(tiles[2], 2)}
-      <Divider orientation="vertical" />
-      {cell(tiles[3], 3)}
+      {tiles.map((t, i) => (
+        <Card key={i} variant="outlined" padding="md" className="kpis__card">
+          <Stat size="md" {...t} />
+        </Card>
+      ))}
     </div>
+  )
+}
+
+// ── 4. Chart in its own outlined card; the note sits under it, outside.
+function ChartCard({ children }: { children: ReactNode }) {
+  return (
+    <Card variant="outlined" padding="md" className="delivery__chart">
+      <CardHeader title="Cumulative impressions" titleAs="h3" />
+      {children}
+    </Card>
   )
 }
 
@@ -145,8 +149,7 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
     return (
       <div className="delivery" aria-busy="true">
         <Kpis tiles={[loading, loading, loading, loading]} />
-        <h3 className="delivery__chart-title">Cumulative impressions</h3>
-        <Skeleton shape="block" height={240} />
+        <ChartCard><Skeleton shape="block" height={240} /></ChartCard>
       </div>
     )
   }
@@ -156,8 +159,7 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
   return (
     <div className="delivery">
       <Kpis tiles={[tile1(m), tile2(c, period), tile3(m, period), tile4(m, period)]} />
-      <h3 className="delivery__chart-title">Cumulative impressions</h3>
-      <DeliveryChart m={m} area={windowArea(c, period)} areaLabel={periodLabel(period)} />
+      <ChartCard><DeliveryChart m={m} area={windowArea(c, period)} areaLabel={periodLabel(period)} /></ChartCard>
       {note && <p className="delivery__note">{note}</p>}
       {m.status !== 'scheduled' && <Details m={m} />}
     </div>
