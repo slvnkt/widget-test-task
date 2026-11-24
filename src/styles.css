@@ -5,11 +5,13 @@ html[data-theme='dark'] { color-scheme: dark; }
 /* Status glyph colours that differ by theme (TEMP until --ot-color-status-icon-* tokens exist; see campaigns/status.ts). */
 :root, [data-theme='light'] {
   --status-icon-behind: #EAB308; /* TEMP saturated yellow, no DS token */
+  --status-icon-behind-arrow: #fff;
   --status-icon-paused: var(--ot-palette-neutral-800);
   --status-icon-cancelled: var(--ot-color-text-disabled);
 }
 [data-theme='dark'] {
   --status-icon-behind: #EAB308; /* TEMP */
+  --status-icon-behind-arrow: var(--ot-color-bg-primary); /* dark arrow on yellow in dark theme */
   --status-icon-paused: var(--ot-palette-neutral-200); /* 10.5:1 on dark; neutral-800 would be 1.5:1 */
   --status-icon-cancelled: var(--ot-palette-neutral-500); /* 4.1:1; text-disabled is 2.9:1 on dark */
 }

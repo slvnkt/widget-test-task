@@ -20,7 +20,7 @@ function Glyph({ glyph }: { glyph: StatusGlyph }) {
       return (
         <svg viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="6.5" fill="currentColor" />
-          <path d="M7 3.75v6M4.5 7.5 7 10l2.5-2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M7 3.75v6M4.5 7.5 7 10l2.5-2.5" stroke="var(--status-icon-behind-arrow)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )
     case 'warning': return <WarningCircle weight="fill" className="status-icon__ph" />
