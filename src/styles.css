@@ -1,5 +1,18 @@
 *, *::before, *::after { box-sizing: border-box; }
 html { color-scheme: light; }
+html[data-theme='dark'] { color-scheme: dark; }
+
+/* Status glyph colours that differ by theme (TEMP until --ot-color-status-icon-* tokens exist; see campaigns/status.ts). */
+:root, [data-theme='light'] {
+  --status-icon-behind: var(--ot-palette-warning-500);
+  --status-icon-paused: var(--ot-palette-neutral-800);
+  --status-icon-cancelled: var(--ot-color-text-disabled);
+}
+[data-theme='dark'] {
+  --status-icon-behind: var(--ot-palette-warning-400);
+  --status-icon-paused: var(--ot-palette-neutral-200); /* 10.5:1 on dark; neutral-800 would be 1.5:1 */
+  --status-icon-cancelled: var(--ot-palette-neutral-500); /* 4.1:1; text-disabled is 2.9:1 on dark */
+}
 html, body { margin: 0; }
 body {
   background: var(--ot-color-bg-secondary);
@@ -22,10 +35,6 @@ p { text-wrap: pretty; }
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr); /* sidebar width from the handoff, no token */
   min-height: 100vh;
-}
-.app {
-  /* The prototype control sits at the bottom of the sidebar; the sidebar keeps this much room for it. */
-  --proto-height: 64px; /* compact control height, prototype only, no token */
 }
 .main {
   padding: 0 var(--ot-space-8) var(--ot-space-8);
@@ -86,25 +95,42 @@ p { text-wrap: pretty; }
 .search__clear:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
 
 /* ── Sidebar (TEMP stand-in) ── */
+/* Floating panel on the canvas, inset 12 from top/left/bottom; blocks separated by space and soft inner surfaces. */
 .sidenav {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: var(--ot-space-3);
+  height: calc(100vh - 2 * var(--ot-space-3));
+  margin: var(--ot-space-3) 0 var(--ot-space-3) var(--ot-space-3);
   display: flex;
   flex-direction: column;
-  padding: var(--ot-spacing-padding-lg);
-  padding-bottom: calc(var(--ot-spacing-padding-lg) * 2 + var(--proto-height));
+  gap: var(--ot-spacing-gap-md);
+  padding: var(--ot-spacing-padding-md);
+  border-radius: var(--ot-card-radius);
   background: var(--ot-color-bg-primary);
-  border-right: var(--ot-shape-border-width-sm) solid var(--ot-color-border-primary);
+  box-shadow: var(--ot-shadow-sm);
+}
+.sidenav__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ot-spacing-gap-md);
+}
+/* Inner radius = panel radius − panel padding. */
+.sidenav__block--surface {
+  padding: var(--ot-spacing-padding-md);
+  border-radius: calc(var(--ot-card-radius) - var(--ot-spacing-padding-md));
+  background: var(--ot-color-bg-secondary);
+}
+.sidenav__brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ot-spacing-gap-sm);
 }
 .sidenav__brand {
-  padding-left: var(--ot-list-item-size-md-padding-x);
-  margin-bottom: var(--ot-spacing-section-sm);
   font-size: var(--ot-typography-heading-sm-font-size);
   line-height: var(--ot-typography-heading-sm-line-height);
   font-weight: var(--ot-typography-heading-sm-font-weight);
 }
-.sidenav__account { margin-bottom: var(--ot-spacing-gap-xl); }
 .sidenav__footer { margin-top: auto; }
 .sidenav__list {
   display: flex;
@@ -337,10 +363,13 @@ p { text-wrap: pretty; }
 
 /* ── Drawer (TEMP stand-in) ── */
 .drawer {
+  /* Floats like the sidebar: inset 12 from top/right/bottom, rounded. */
   position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
+  top: var(--ot-space-3);
+  right: var(--ot-space-3);
+  height: calc(100vh - 2 * var(--ot-space-3));
+  overflow: hidden; /* rounded corners clip the scrolling body; fixed tooltips are not clipped */
+  border-radius: var(--ot-card-radius);
   z-index: 28; /* above the sticky page top (25), below the prototype control (30); no layer tokens yet */
   display: flex;
   flex-direction: column;
@@ -504,14 +533,8 @@ p { text-wrap: pretty; }
 
 /* ── Prototype control (not product UI) ── */
 /* Bottom-left, inside the sidebar's reserved space: never over the table or the drawer. */
-.proto {
-  position: fixed;
-  left: var(--ot-spacing-padding-lg);
-  bottom: var(--ot-spacing-padding-lg);
-  z-index: 30;
-  width: calc(240px - 2 * var(--ot-spacing-padding-lg)); /* sidebar width, no token */
-  box-shadow: var(--ot-shadow-md);
-}
+/* Lives in the sidebar's bottom block. */
+.proto { position: relative; z-index: 30; }
 /* The DS listbox opens downward; at the bottom of the viewport it must open upward and scroll. */
 .proto .ot-select__listbox {
   top: auto;

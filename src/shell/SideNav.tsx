@@ -31,18 +31,34 @@ function NavList({ items }: { items: NavLink[] }) {
   )
 }
 
-/** `account`: optional account / advertiser switcher under the wordmark. */
-export function SideNav({ brand, account, items, footerItems }: { brand: string; account?: ReactNode; items: NavLink[]; footerItems: NavLink[] }) {
+/**
+ * Floating panel of stacked blocks: account (wordmark, `brandAction` e.g. theme toggle, `account` switcher), navigation,
+ * and an optional `bottom` block (the prototype control).
+ */
+export function SideNav({ brand, brandAction, account, items, footerItems, bottom }: {
+  brand: string
+  brandAction?: ReactNode
+  account?: ReactNode
+  items: NavLink[]
+  footerItems: NavLink[]
+  bottom?: ReactNode
+}) {
   return (
     <aside className="sidenav">
-      <p className="sidenav__brand">{brand}</p>
-      {account && <div className="sidenav__account">{account}</div>}
+      <div className="sidenav__block sidenav__block--surface">
+        <div className="sidenav__brand-row">
+          <p className="sidenav__brand">{brand}</p>
+          {brandAction}
+        </div>
+        {account}
+      </div>
       <nav className="sidenav__nav" aria-label="Main">
         <NavList items={items} />
       </nav>
       <nav className="sidenav__footer" aria-label="Help and settings">
         <NavList items={footerItems} />
       </nav>
+      {bottom && <div className="sidenav__block sidenav__block--surface">{bottom}</div>}
     </aside>
   )
 }

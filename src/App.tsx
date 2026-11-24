@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CalendarBlank, ChartLine, GearSix, House, Question, Receipt, Television, UsersThree } from '@phosphor-icons/react'
+import { CalendarBlank, ChartLine, GearSix, House, Moon, Question, Receipt, Sun, Television, UsersThree } from '@phosphor-icons/react'
 import { Button } from '@ds/components/Button'
-import { Card } from '@ds/components/Card'
+import { IconButton } from '@ds/components/IconButton'
 import { Select } from '@ds/components/Select'
 import { Term } from '@ds/components/Tooltip'
 import type { TableSort } from '@ds/components/Table'
@@ -19,8 +19,8 @@ import { SideNav, type NavLink } from './shell/SideNav'
 import { DeliveryWidget, type DetailsState } from './widget/DeliveryWidget'
 
 const NAV: NavLink[] = [
-  { label: 'Overview', icon: <House />, href: '#overview' },
-  { label: 'Campaigns', icon: <Television />, href: '#campaigns', current: true },
+  { label: 'Dashboard', icon: <House />, href: '#dashboard', current: true },
+  { label: 'Campaigns', icon: <Television />, href: '#campaigns' },
   { label: 'Planning', icon: <CalendarBlank />, href: '#planning' },
   { label: 'Audiences', icon: <UsersThree />, href: '#audiences' },
   { label: 'Reports', icon: <ChartLine />, href: '#reports' },
@@ -30,6 +30,18 @@ const NAV_FOOTER: NavLink[] = [
   { label: 'Help', icon: <Question />, href: '#help' },
   { label: 'Settings', icon: <GearSix />, href: '#settings' },
 ]
+
+// Theme: light by default, remembered per browser. Set before the first render so there is no flash.
+type Theme = 'light' | 'dark'
+const THEME_KEY = 'theme'
+function readTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+document.documentElement.dataset.theme = readTheme()
 
 // Prototype control: system states only; lifecycle and data states are the table rows.
 type ProtoState = 'live' | 'loading' | 'error' | 'empty' | 'stale' | 'details-loading' | 'details-error'
@@ -115,6 +127,15 @@ export function App() {
   const [campaignId, setCampaignId] = useState<string | null>(initial.campaignId)
   const [sort, setSort] = useState<TableSort | null>(null)
   const [proto, setProto] = useState<ProtoState>('live')
+  const [theme, setTheme] = useState<Theme>(readTheme)
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem(THEME_KEY, theme)
+    } catch {
+      // storage blocked: the choice lasts for this page only
+    }
+  }, [theme])
   const titleRef = useRef<HTMLHeadingElement>(null)
   const returnTo = useRef<string | null>(null)
 
@@ -183,15 +204,29 @@ export function App() {
     <div className="app">
       <SideNav
         brand="Simulmedia TV+"
+        brandAction={
+          <IconButton
+            variant="ghost"
+            size="sm"
+            icon={theme === 'dark' ? <Sun /> : <Moon />}
+            label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
+          />
+        }
         account={<Select size="sm" label="Advertiser" value={advertiser} onValueChange={setAdvertiser} options={ADVERTISER_OPTIONS} />}
         items={NAV}
         footerItems={NAV_FOOTER}
+        bottom={
+          <div className="proto" role="group" aria-label="Prototype controls">
+            <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
+          </div>
+        }
       />
 
       <main className="main">
         {/* Sticky so the filters stay visible at any scroll; the drawer layers above it. */}
         <div className="page-top">
-          <PageHeader title="Campaigns" />
+          <PageHeader title="Dashboard" />
           {LIST_STATE[proto] !== 'empty' && (
             <div className="filter-bar" role="group" aria-label="Filters">
               {/* Error: the bar stays in place (no layout jump), disabled until the list loads. */}
@@ -221,15 +256,6 @@ export function App() {
         {campaign && <DeliveryWidget c={campaign} period={period} state={DETAILS_STATE[proto] ?? 'ready'} onRetry={retry} />}
       </Drawer>
 
-      <Card as="aside" variant="outlined" padding="md" className="proto" aria-label="Prototype controls">
-        <Select
-          size="sm"
-          aria-label="Prototype state"
-          value={proto}
-          onValueChange={v => setProto(v as ProtoState)}
-          options={PROTO_OPTIONS}
-        />
-      </Card>
     </div>
   )
 }
