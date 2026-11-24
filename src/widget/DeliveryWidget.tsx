@@ -23,7 +23,7 @@ function tile1(m: Model): StatProps {
   const withBadge = (text?: ReactNode) => (
     <span className="kpis__status">
       <StatusIcon status={m.status} label />
-      {text}
+      {text && <span>· {text}</span>}
     </span>
   )
   const N = CAMPAIGN.flightDays
@@ -39,15 +39,15 @@ function tile1(m: Model): StatProps {
       return { label: 'Stopped on', value: m.fmt(m.def.stopDay ?? m.def.today), secondary: withBadge() }
     case 'finalizing':
       // networks send logs 5–10 days after air: final numbers 10 days after the last flight day
-      return { label: 'Delivered, awaiting final logs', value: pctOf(m.delivered, m.guarantee), unit: 'of guarantee', secondary: withBadge(`Final numbers by ${m.fmt(N - 1 + 10)}`) }
+      return { label: 'Delivered, awaiting final logs', value: pctOf(m.delivered, m.guarantee), unit: 'of goal', secondary: withBadge(`Final numbers by ${m.fmt(N - 1 + 10)}`) }
     case 'final-met':
     case 'final-under':
-      return { label: 'Final delivery', value: pctOf(m.delivered, m.guarantee), unit: 'of guarantee', secondary: withBadge() }
+      return { label: 'Final delivery', value: pctOf(m.delivered, m.guarantee), unit: 'of goal', secondary: withBadge() }
     default:
       return {
         label: 'Projected at flight end',
         value: `${Math.round(m.projPct)}%`,
-        unit: 'of guarantee',
+        unit: 'of goal',
         secondary: withBadge(`${fmtM(m.projection)} projected${m.status === 'behind' && m.makegoodImps > 0 ? ' with makegood' : ''}`),
         hint: HINTS.projected,
       }
@@ -63,7 +63,7 @@ function tile2(c: Campaign, period: Period): StatProps {
   if (period !== 'ftd') {
     const label = `Delivered, ${periodLabel(period).toLowerCase()}`
     if (!r.hasData) return { label, value: '—', secondary: 'Nothing aired in this period', hint: HINTS.delivered }
-    const secondary = !gap ? `Plan ${fmtM(r.target)}` : gap.value === 0 ? `In line with plan of ${fmtM(gap.ref)}` : `${signedM(gap.value)} vs plan of ${fmtM(gap.ref)}`
+    const secondary = !gap ? `Plan ${fmtM(r.target)}` : gap.value === 0 ? `In line with plan (${fmtM(gap.ref)})` : `${signedM(gap.value)} vs plan (${fmtM(gap.ref)})`
     return { label, value: fmtM(r.delivered), secondary, hint: HINTS.delivered }
   }
   if (m.phase === 'finalized') {
@@ -71,13 +71,13 @@ function tile2(c: Campaign, period: Period): StatProps {
   }
   const noGap: Partial<Record<Model['status'], string>> = {
     'too-early': 'Preliminary only',
-    paused: `${pctOf(m.delivered, m.guarantee)} of guarantee`,
-    cancelled: `${pctOf(m.delivered, m.guarantee)} of guarantee`,
+    paused: `${pctOf(m.delivered, m.guarantee)} of goal`,
+    cancelled: `${pctOf(m.delivered, m.guarantee)} of goal`,
   }
   return {
     label: 'Delivered to date',
     value: fmtM(m.delivered),
-    secondary: gap ? `${signedM(gap.value)} vs ${gap.vs} of ${fmtM(gap.ref)}` : noGap[m.status],
+    secondary: gap ? `${signedM(gap.value)} vs ${gap.vs} (${fmtM(gap.ref)})` : noGap[m.status],
     hint: HINTS.delivered,
   }
 }
@@ -145,7 +145,6 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
     return (
       <div className="delivery" aria-busy="true">
         <Kpis tiles={[loading, loading, loading, loading]} />
-        <Divider spacing="lg" />
         <h3 className="delivery__chart-title">Cumulative impressions</h3>
         <Skeleton shape="block" height={240} />
       </div>
@@ -157,10 +156,9 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
   return (
     <div className="delivery">
       <Kpis tiles={[tile1(m), tile2(c, period), tile3(m, period), tile4(m, period)]} />
-      {note && <p className="delivery__note">{note}</p>}
-      <Divider spacing="lg" />
       <h3 className="delivery__chart-title">Cumulative impressions</h3>
       <DeliveryChart m={m} area={windowArea(c, period)} areaLabel={periodLabel(period)} />
+      {note && <p className="delivery__note">{note}</p>}
       {m.status !== 'scheduled' && <Details m={m} />}
     </div>
   )

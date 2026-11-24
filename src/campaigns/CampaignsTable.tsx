@@ -1,18 +1,17 @@
 import { CaretRight } from '@phosphor-icons/react'
-import { Progress } from '@ds/components/Progress'
 import { Table, TwoLineCell, type TableColumn, type TableSort } from '@ds/components/Table'
-import { Tooltip } from '@ds/components/Tooltip'
+import { Tooltip, type TooltipRow } from '@ds/components/Tooltip'
 import { fmtM } from '../data/campaign'
-import type { Period } from '../data/period'
+import { periodLabel, type Period } from '../data/period'
 import type { Campaign } from '../data/rows'
 import { signedM } from '../widget/copy'
 import { rowMetrics, type RowMetrics } from './bar'
+import { ProgressRing } from './ProgressRing'
 import { StatusIcon } from './StatusIcon'
 
 export const rowLabel = (c: Campaign) => `Open ${c.name}, ${c.brand}`
 
-const PROGRESS_HINT = 'Delivered as % of guarantee. The plan marker shows where the plan expects delivery today. Includes preliminary smart-TV estimates for the last 7 days.'
-const PROGRESS_HINT_WINDOW = 'Delivered as % of plan for the period.'
+const GAP_HINT = 'Delivered minus what the media plan expects by yesterday.'
 
 /** Status glyph + label plus, for data conditions, one muted word. */
 export function StatusCell({ c }: { c: Campaign }) {
@@ -23,30 +22,48 @@ export function StatusCell({ c }: { c: Campaign }) {
   )
 }
 
-/** Value only ("17.9M"): the ratio lives in Progress. */
-function DeliveredCell({ r }: { r: RowMetrics }) {
-  if (!r.hasData) return <span className="cell-secondary">—</span>
-  return <span className="delivered-cell">{fmtM(r.delivered)}</span>
+const pct = (v: number, of: number) => Math.round((v / of) * 100)
+
+/** Hover/focus breakdown of the Delivered cell (handoff v8 §3). Live rows add plan, gap and projection; finalized rows show the gap vs goal. */
+function deliveredRows(c: Campaign, r: RowMetrics, period: Period): TooltipRow[] {
+  const { m } = c
+  if (!r.hasData) return [{ label: 'Delivered', value: '—' }, period === 'ftd' ? { label: 'Goal', value: fmtM(r.target) } : { label: 'Plan', value: r.target > 0 ? fmtM(r.target) : '—' }]
+  const split = [{ label: 'Confirmed', value: fmtM(r.confirmed) }, { label: 'Preliminary', value: fmtM(r.prelim) }]
+  const gap = r.gap && { label: `Gap vs ${r.gap.vs === 'goal' ? 'goal' : 'plan'}`, value: signedM(r.gap.value) }
+  if (period !== 'ftd') {
+    return [
+      { label: 'Delivered', value: `${fmtM(r.delivered)} (${pct(r.delivered, r.target)}% of plan)` },
+      ...split,
+      { label: `Plan, ${periodLabel(period).toLowerCase()}`, value: fmtM(r.target) },
+      ...(gap ? [gap] : []),
+    ]
+  }
+  const delivered = { label: 'Delivered', value: `${fmtM(r.delivered)} (${pct(r.delivered, r.target)}% of goal)` }
+  const goal = { label: 'Goal', value: fmtM(r.target) }
+  if (m.phase === 'ended' || m.phase === 'finalized') return [delivered, goal, ...(gap ? [gap] : [])]
+  if (m.phase !== 'live') return [delivered, ...split, goal]
+  const live: TooltipRow[] = [delivered, ...split]
+  if (r.expected) live.push({ label: 'Plan to date', value: fmtM(r.expected) })
+  if (gap) live.push(gap)
+  live.push(goal)
+  if (m.status !== 'too-early') live.push({ label: 'Projected', value: `${fmtM(m.projection)} (${Math.round(m.projPct)}%)` })
+  return live
 }
 
-// One solid segment (no confirmed/preliminary split: that lives in the drawer); bar end = guarantee or window plan.
-function ProgressCell({ r }: { r: RowMetrics }) {
-  if (!r.hasData) return <span className="cell-secondary">—</span>
-  const max = r.target
+/** Ring + "17.9M of 48.0M"; the ring is not coloured by pace (the Status glyph does that). */
+function DeliveredCell({ c, r, period }: { c: Campaign; r: RowMetrics; period: Period }) {
+  const of = r.target > 0 ? <span className="delivered-cell__of"> of {fmtM(r.target)}</span> : null
   return (
-    <span className="ot-table-progress">
-      <Progress
-        size="md"
-        max={max}
-        segments={r.delivered > 0 ? [{ value: Math.min(r.delivered, max), label: r.aria }] : []}
-        markers={r.expected ? [{ value: r.expected, type: 'marker', label: 'Plan to date' }] : []}
-        muted={r.muted}
-        showLegend={false}
-        showMarkerLabels={false}
-        ariaLabel={r.aria}
-      />
-      <span className="ot-table-progress__value" aria-hidden="true">{r.pct}%</span>
-    </span>
+    <Tooltip variant="light" title={c.name} rows={deliveredRows(c, r, period)} placement="bottom" anchorClassName="delivered-cell__anchor">
+      {/* Focusable so keyboard users get the breakdown too; Enter here does not open the row (the DS row ignores bubbled keys). */}
+      <span className="delivered-cell" tabIndex={0} aria-label={r.aria}>
+        <ProgressRing value={r.hasData ? r.delivered : 0} max={r.target} muted={r.muted} />
+        <span className="delivered-cell__text">
+          {r.hasData ? <span className="delivered-cell__value">{fmtM(r.delivered)}</span> : <span className="delivered-cell__of">—</span>}
+          {of}
+        </span>
+      </span>
+    </Tooltip>
   )
 }
 
@@ -68,36 +85,35 @@ interface Props {
 }
 
 export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, onOpen, loading, showBrand }: Props) {
-  const hint = period === 'ftd' ? PROGRESS_HINT : PROGRESS_HINT_WINDOW
   const columns: TableColumn<Campaign>[] = [
     {
       key: 'name',
       header: 'Campaign',
-      width: 180,
+      width: 240,
       // All advertisers: the advertiser is a muted second line, not a column.
       render: c => {
         const name = <span className="cell-ellipsis campaign-name" title={c.name}>{c.name}</span>
         return showBrand ? <TwoLineCell primary={name} secondary={<span className="cell-ellipsis" title={c.brand}>{c.brand}</span>} /> : name
       },
     },
-    { key: 'status', header: 'Status', width: 184, sortable: true, render: c => <StatusCell c={c} /> },
-    { key: 'flight', header: 'Flight', width: 116, sortable: true, render: c => <span className="cell-secondary">{c.m.fmt(0)} – {c.m.fmt(41)}</span> },
-    { key: 'delivered', header: 'Delivered', width: 96, align: 'right', sortable: true, render: c => <DeliveredCell r={rowMetrics(c, period)} /> },
+    { key: 'status', header: 'Status', width: 176, sortable: true, render: c => <StatusCell c={c} /> },
+    { key: 'flight', header: 'Flight', width: 128, sortable: true, render: c => <span className="cell-secondary">{c.m.fmt(0)} – {c.m.fmt(41)}</span> },
+    { key: 'delivered', header: 'Delivered', width: 200, sortable: true, render: c => <DeliveredCell c={c} r={rowMetrics(c, period)} period={period} /> },
     {
-      key: 'progress',
-      // Inside the DS sort button, so the trigger is not a second button: hover shows the tooltip, the sr-only text reads the definition.
+      key: 'gap',
+      // Term look inside the DS sort button (a real Term button would nest buttons): hover shows the tooltip, the sr-only text reads it.
       header: (
-        <Tooltip text={hint} placement="bottom">
-          <span className="ot-term">Progress<span className="sr-only">. {hint}</span></span>
+        <Tooltip text={GAP_HINT} placement="bottom">
+          <span className="ot-term">Gap<span className="sr-only">. {GAP_HINT}</span></span>
         </Tooltip>
       ),
-      width: 204,
+      width: 128,
+      align: 'right',
       sortable: true,
-      render: c => <ProgressCell r={rowMetrics(c, period)} />,
+      render: c => <GapCell c={c} r={rowMetrics(c, period)} />,
     },
-    { key: 'gap', header: 'Gap', width: 104, align: 'right', sortable: true, render: c => <GapCell c={c} r={rowMetrics(c, period)} /> },
     // Opens the drawer: a muted chevron says the row is a way in (the row itself is the button).
-    { key: 'open', header: <span className="sr-only">Details</span>, width: 36, render: () => <span className="row-chevron" aria-hidden="true"><CaretRight /></span> },
+    { key: 'open', header: <span className="sr-only">Details</span>, width: 40, render: () => <span className="row-chevron" aria-hidden="true"><CaretRight /></span> },
   ]
 
   return (

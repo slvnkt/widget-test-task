@@ -1,4 +1,4 @@
-// Delivered / Progress / Gap values for one campaign row (millions). Shared with the drawer's tile 2.
+// Delivered / Gap values for one campaign row (millions). Shared with the drawer's tile 2.
 import { fmtM } from '../data/campaign'
 import { deliveryIn, periodRange, type Period } from '../data/period'
 import type { Campaign } from '../data/rows'
@@ -9,13 +9,15 @@ export interface Gap {
   /** Signed, from the rounded display values, so "6.2M of 6.2M" never shows "+0.1M". */
   value: number
   /** What the gap is measured against. */
-  vs: 'plan to date' | 'guarantee' | 'plan'
+  vs: 'plan to date' | 'goal' | 'plan'
   ref: number
 }
 
 export interface RowMetrics {
   delivered: number
-  /** Guarantee (Flight to date) or plan for the window: the bar's max. */
+  confirmed: number
+  prelim: number
+  /** Goal (Flight to date) or plan for the window: the ring's max. */
   target: number
   hasData: boolean
   /** Plan to date for the plan marker: Flight to date, live rows only. */
@@ -40,18 +42,20 @@ export function rowMetrics(c: Campaign, period: Period): RowMetrics {
   if (!noGap) {
     if (!ftd) ref = { vs: 'plan', ref: d.target }
     else if (expected) ref = { vs: 'plan to date', ref: expected }
-    else if (m.phase === 'ended' || m.phase === 'finalized') ref = { vs: 'guarantee', ref: d.target }
+    else if (m.phase === 'ended' || m.phase === 'finalized') ref = { vs: 'goal', ref: d.target }
   }
   const gap = ref && { ...ref, value: round1(round1(d.delivered) - round1(ref.ref)) }
 
   const range = periodRange(period)
   let aria: string
-  if (!d.hasData) aria = ftd ? `Not started. ${fmtM(d.target)} guarantee.` : `Nothing aired in ${range}.`
-  else if (ftd) aria = `${fmtM(d.delivered)} of ${fmtM(d.target)} guarantee.${expected ? ` Plan to date ${fmtM(expected)}.` : ''}`
+  if (!d.hasData) aria = ftd ? `Not started. ${fmtM(d.target)} goal.` : `Nothing aired in ${range}.`
+  else if (ftd) aria = `${fmtM(d.delivered)} of ${fmtM(d.target)} goal.${expected ? ` Plan to date ${fmtM(expected)}.` : ''}`
   else aria = `${fmtM(d.delivered)} of ${fmtM(d.target)} plan for ${range}.`
 
   return {
     delivered: d.delivered,
+    confirmed: d.confirmed,
+    prelim: d.prelim,
     target: d.target,
     hasData: d.hasData,
     expected,

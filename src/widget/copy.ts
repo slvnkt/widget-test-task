@@ -1,8 +1,10 @@
 // Widget and Campaigns page copy (handoff-table-drawer §2.3, §4.2, §4.3).
+import { createElement, Fragment, type ReactNode } from 'react'
+import { Term } from '@ds/components/Tooltip'
 import { CAMPAIGN, fmtM, type Model } from '../data/campaign'
 
 export const HINTS = {
-  projected: 'Forecast at flight end if the remaining spots air as planned and keep delivering at the current pace.',
+  projected: 'Forecast at flight end if the remaining spots air as planned. Goal = booked impressions.',
   delivered: 'Network logs plus preliminary smart-TV estimates. The chart shows the split.',
   logs: 'Networks send post-logs 5–10 days after air. Until then, those days use preliminary estimates.',
 }
@@ -23,8 +25,13 @@ export const signedM = (v: number) => {
   return r < 0 ? `−${Math.abs(r).toFixed(1)}M` : `+${r.toFixed(1)}M`
 }
 
+const MAKEGOOD_HINT = 'Extra spots scheduled to make up a shortfall.'
+const makegood = (word: string) => createElement(Term, { definition: MAKEGOOD_HINT, children: word })
+// Varargs children: no list keys needed.
+const line = (...parts: ReactNode[]) => createElement(Fragment, null, ...parts)
+
 /** The drawer's one explanatory line for states that need it (§4.2, §4.3); null otherwise. */
-export function noteLine(m: Model): string | null {
+export function noteLine(m: Model): ReactNode {
   const { def } = m
   if (def.revised) {
     const by = def.revised.by * (m.guarantee / CAMPAIGN.guarantee)
@@ -37,9 +44,9 @@ export function noteLine(m: Model): string | null {
   }
   if (m.prelimThrough === null && m.phase === 'live') return `No smart-TV estimates this week, so status uses network logs through ${m.confirmedThroughLabel} only.`
   if (m.status === 'behind' && def.makegood?.from !== undefined) {
-    return `${m.makegoodSpots} makegood spots run ${m.fmt(def.makegood.from)} – ${m.fmt(def.makegood.to)} and add ${fmtM(m.makegoodImps)}.`
+    return line(`${m.makegoodSpots} `, makegood('makegood'), ` spots run ${m.fmt(def.makegood.from)} – ${m.fmt(def.makegood.to)} and add ${fmtM(m.makegoodImps)}.`)
   }
-  if (m.status === 'at-risk') return 'No makegood scheduled yet. Your Simulmedia account manager will propose one.'
-  if (m.status === 'final-under' && def.makegood) return `Makegood spots for ${fmtM(m.guarantee - m.delivered)} run by ${m.fmt(def.makegood.to)}.`
+  if (m.status === 'at-risk') return line(`Projected ${fmtM(m.guarantee - m.projection)} short of goal. No `, makegood('makegood'), ' scheduled yet; your account manager will propose one.')
+  if (m.status === 'final-under' && def.makegood) return line(makegood('Makegood'), ` spots for ${fmtM(m.guarantee - m.delivered)} run by ${m.fmt(def.makegood.to)}.`)
   return null
 }

@@ -1,6 +1,6 @@
 // TEMP stand-in until Omnitaki DS ships StatusIcon; replace then.
-// Linear-style stage glyph (pie fill is fixed per stage, not delivered %), optionally followed by the label.
-import { CheckCircle, MinusCircle, PauseCircle, XCircle } from '@phosphor-icons/react'
+// Round 14px Linear-style glyphs: custom SVG rings/pies for stages, Phosphor `fill` for verdicts. Pie fill is fixed per stage, not delivered %.
+import { ArrowCircleDown, ArrowCircleUp, CheckCircle, MinusCircle, PauseCircle, WarningCircle, XCircle } from '@phosphor-icons/react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { Status } from '../data/campaign'
 import { STATUS, type StatusGlyph } from './status'
@@ -13,10 +13,14 @@ const PIE: Partial<Record<StatusGlyph, string>> = {
 
 function Glyph({ glyph }: { glyph: StatusGlyph }) {
   switch (glyph) {
-    case 'pause': return <PauseCircle weight="bold" />
-    case 'check': return <CheckCircle weight="fill" />
-    case 'minus': return <MinusCircle weight="fill" />
-    case 'x': return <XCircle weight="bold" />
+    // Phosphor circles are 208/256 of the box; scaled in CSS to the 13px outer size of the custom rings.
+    case 'arrow-up': return <ArrowCircleUp weight="fill" className="status-icon__ph" />
+    case 'arrow-down': return <ArrowCircleDown weight="fill" className="status-icon__ph" />
+    case 'warning': return <WarningCircle weight="fill" className="status-icon__ph" />
+    case 'pause': return <PauseCircle weight="fill" className="status-icon__ph" />
+    case 'check': return <CheckCircle weight="fill" className="status-icon__ph" />
+    case 'minus': return <MinusCircle weight="fill" className="status-icon__ph" />
+    case 'x': return <XCircle weight="fill" className="status-icon__ph" />
   }
   const pie = PIE[glyph]
   return (

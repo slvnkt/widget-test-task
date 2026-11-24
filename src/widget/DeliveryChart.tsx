@@ -10,7 +10,7 @@ const HEIGHT = 240
 const X_TICK_DAYS = [0, 14, 28, CAMPAIGN.flightDays - 1]
 const PLAN_LABEL_DAY = 28
 
-/** Round steps (5 / 10 / 20M), 4–6 ticks covering the guarantee and the forecast; the guarantee line carries its own label. */
+/** Round steps (5 / 10 / 20M), 4–6 ticks covering the goal and the forecast; the goal line carries its own label. */
 function yTicks(top: number) {
   const step = [5, 10, 20, 50].find(s => Math.ceil(top / s) <= 5) ?? 50
   const n = Math.max(3, Math.ceil(top / step))
@@ -131,7 +131,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
   const inward = (day: number) => (day < 10 ? { anchor: 'start' as const, dx: 6, dy: -28 } : {})
   // Confirmed and preliminary ends a few days apart: lift the preliminary label above the confirmed one.
   const prelimStacked = !!lastPrelim && !!lastConfirmed && lastPrelim.day - lastConfirmed.day <= 4
-  // Confirmed end just under the guarantee line with preliminary still to come: label inside the fill, below the line.
+  // Confirmed end just under the goal line with preliminary still to come: label inside the fill, below the line.
   const confirmedBelow = !!lastPrelim && lastConfirmed?.confirmed !== undefined && m.guarantee - lastConfirmed.confirmed < m.guarantee * 0.2
 
   return (
@@ -155,7 +155,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
         />
 
         <Area dataKey="band" stroke="none" fill="var(--ot-color-bg-tertiary)" fillOpacity={1} activeDot={false} isAnimationActive={false} />
-        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Guarantee ${+m.guarantee.toFixed(1)}M`} anchor="start" dy={-6} />} />
+        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Goal ${+m.guarantee.toFixed(1)}M`} anchor="start" dy={-6} />} />
         <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="1 3" strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} />
         <Area dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} fill="var(--ot-color-data-track)" fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Area dataKey="prelim" type="monotone" stroke="var(--color-prelim)" strokeWidth={2} strokeDasharray="2 3" strokeLinecap="round" fill={`url(#${hatchId})`} fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
@@ -171,8 +171,9 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
         {lastPrelim?.prelim !== undefined && (
           <ReferenceDot x={lastPrelim.label} y={lastPrelim.prelim} r={0} label={<DirectLabel text={`Preliminary ${m.confirmed > 0 ? signedM(m.prelim) : fmtM(m.prelim)}`} dy={prelimStacked ? -26 : -10} tone="primary" {...inward(lastPrelim.day)} />} />
         )}
+        {/* Right-aligned at flight end, lifted clear of the goal line and the band top (~25px above the goal on Holiday Linear Q4). */}
         {last.band && (
-          <ReferenceDot x={last.label} y={last.band[1]} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={-8} type="body" />} />
+          <ReferenceDot x={last.label} y={Math.max(m.guarantee, last.band[1])} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={-12} type="body" />} />
         )}
       </ComposedChart>
     </ChartContainer>

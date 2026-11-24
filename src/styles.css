@@ -31,11 +31,11 @@ p { text-wrap: pretty; }
   padding: 0 var(--ot-space-8) var(--ot-space-8);
   min-width: 0;
 }
-/* Page title + filter bar stay on top while the page scrolls; the drawer opens under its bottom edge (--drawer-top). */
+/* Page title + filter bar stay on top while the page scrolls; the drawer layers above it. */
 .page-top {
   position: sticky;
   top: 0;
-  z-index: 25; /* above the drawer (20) so Select popovers overlap it; no layer tokens yet */
+  z-index: 25; /* above the table; below the drawer (28); no layer tokens yet */
   display: flex;
   flex-direction: column;
   gap: var(--ot-spacing-gap-lg);
@@ -50,9 +50,34 @@ p { text-wrap: pretty; }
   gap: var(--ot-spacing-gap-sm);
 }
 /* Select widths from the design-director handoff, no tokens */
+.filter-bar > .filter-bar__search { width: 240px; }
 .filter-bar > .filter-bar__period { width: 168px; }
 .filter-bar > .filter-bar__status { width: 184px; }
-.filter-bar > .filter-bar__campaign { width: 224px; }
+
+/* Search: the clear button sits over the field's right edge; the field reserves room for it while filled. */
+.search { position: relative; }
+.search--filled .ot-field {
+  padding-inline-end: calc(var(--ot-field-size-sm-padding-x) + var(--ot-field-size-sm-icon-size) + var(--ot-spacing-gap-xs));
+}
+.search__clear {
+  position: absolute;
+  top: 50%;
+  right: var(--ot-field-size-sm-padding-x);
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ot-shape-radius-full);
+  background: none;
+  color: var(--ot-color-text-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.search__clear > svg { width: var(--ot-field-size-sm-icon-size); height: var(--ot-field-size-sm-icon-size); }
+/* 24px hit area around the 16px icon */
+.search__clear::after { content: ''; position: absolute; inset: calc(-1 * var(--ot-space-1)); }
+.search__clear:hover { color: var(--ot-color-text-primary); }
+.search__clear:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
 
 /* ── Sidebar (TEMP stand-in) ── */
 .sidenav {
@@ -167,6 +192,13 @@ p { text-wrap: pretty; }
   white-space: nowrap;
 }
 .campaigns { gap: var(--ot-spacing-gap-lg); }
+/* Title, 12, update time inline on one baseline; fixed 24px row (heading-sm line height) so states never jump. */
+.campaigns__header.ot-card__header {
+  align-items: baseline;
+  gap: var(--ot-spacing-gap-md);
+  height: var(--ot-typography-heading-sm-line-height);
+}
+.campaigns__header .ot-card__heading { flex: none; }
 .campaigns__updated {
   color: var(--ot-color-text-secondary);
   font-size: var(--ot-typography-body-sm-font-size);
@@ -177,13 +209,49 @@ p { text-wrap: pretty; }
 .campaigns__body { display: flex; flex-direction: column; }
 
 .campaigns-table .ot-table { table-layout: fixed; }
-/* Fixed-width % ("103%") so every bar has the same length. */
-.campaigns-table .ot-table-progress__value { flex: none; width: 4ch; text-align: right; white-space: nowrap; }
+/* Fixed columns fit the card (no horizontal scroll), so the wrap can let the Delivered tooltip overflow instead of clipping it. */
+.campaigns-table.ot-table-wrap { overflow: visible; }
+
+/* Delivered: ring 20 → 8 → "17.9M" (label-md, primary) + " of 48.0M" (body-sm, secondary). */
+.delivered-cell__anchor { max-width: 100%; }
 .delivered-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ot-spacing-gap-sm);
+  min-width: 0;
   white-space: nowrap;
+  border-radius: var(--ot-shape-radius-sm);
+}
+.delivered-cell:focus { outline: none; }
+.delivered-cell:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
+.delivered-cell__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.delivered-cell__value {
   color: var(--ot-color-text-primary);
+  font-size: var(--ot-typography-label-md-font-size);
+  line-height: var(--ot-typography-label-md-line-height);
   font-weight: var(--ot-typography-label-md-font-weight);
 }
+.delivered-cell__of { color: var(--ot-color-text-secondary); }
+.progress-ring { flex: none; width: var(--_size); height: var(--_size); }
+.progress-ring__track { stroke: var(--ot-color-data-track); }
+.progress-ring__arc { stroke: var(--ot-color-data-confirmed); }
+.progress-ring__arc--muted { stroke: var(--ot-color-text-tertiary); }
+
+/* Pagination stand-in: 16 above, 40px row. */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--ot-button-size-md-height);
+  margin-top: var(--ot-spacing-gap-lg);
+}
+.pagination__range {
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+  font-variant-numeric: tabular-nums;
+}
+.pagination__buttons { display: flex; gap: var(--ot-spacing-gap-xs); }
 .gap-cell { white-space: nowrap; }
 .gap-cell--secondary { color: var(--ot-color-text-secondary); }
 .gap-cell--primary { color: var(--ot-color-text-primary); }
@@ -230,6 +298,8 @@ p { text-wrap: pretty; }
   height: var(--_size);
 }
 .status-icon__glyph > svg { width: 100%; height: 100%; }
+/* Phosphor circles fill 208/256 of the box; scale to the 13px outer size of the custom rings (r 5.75 + 0.75 stroke). */
+.status-icon__glyph > .status-icon__ph { transform: scale(1.14); }
 .status-icon__label { flex: none; color: var(--ot-color-text-primary); }
 .status-cell__marker { min-width: 0; }
 .status-cell__marker {
@@ -241,31 +311,35 @@ p { text-wrap: pretty; }
 /* ── Drawer (TEMP stand-in) ── */
 .drawer {
   position: fixed;
-  top: calc(var(--drawer-top, 0px) + var(--ot-space-3)); /* = the card top under the sticky page top */
+  top: 0;
   right: 0;
-  bottom: 0;
-  z-index: 20; /* above the page, below the prototype control; no layer tokens yet */
+  height: 100vh;
+  z-index: 28; /* above the sticky page top (25), below the prototype control (30); no layer tokens yet */
   display: flex;
   flex-direction: column;
-  width: min(720px, calc(100vw - 240px)); /* Drawer md; leaves the sidebar visible */
+  width: 640px; /* Drawer width below 1440, handoff v8 §1 */
   background: var(--ot-color-bg-primary);
-  border-top-left-radius: var(--ot-card-radius);
   box-shadow: var(--ot-shadow-lg);
   animation: drawer-in 200ms ease-out; /* motion constants until DS motion tokens exist */
 }
+@media (min-width: 1440px) { .drawer { width: 720px; } } /* Drawer md at >=1440 */
 .drawer--closing { animation: drawer-out 160ms ease-in forwards; }
 @keyframes drawer-in { from { transform: translateX(100%); } }
 @keyframes drawer-out { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
   /* instant, but animationend still fires so the closing drawer unmounts */
-  .drawer, .drawer--closing { animation-duration: 1ms; }
+  .drawer, @media (min-width: 1440px) { .drawer { width: 720px; } } /* Drawer md at >=1440 */
+.drawer--closing { animation-duration: 1ms; }
 }
 .drawer__header {
   display: flex;
   flex-direction: column;
   gap: var(--ot-spacing-gap-xs);
-  padding: var(--ot-spacing-padding-xl);
+  padding: var(--ot-spacing-padding-xl) var(--ot-spacing-padding-xl) var(--ot-spacing-padding-lg);
+  border-bottom: var(--ot-shape-border-width-sm) solid transparent;
 }
+/* Divider only once the body scrolls under the header. */
+.drawer__header--scrolled { border-bottom-color: var(--ot-color-border-primary); }
 .drawer__title-row {
   display: flex;
   align-items: center;
@@ -285,7 +359,7 @@ p { text-wrap: pretty; }
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--ot-spacing-padding-xl);
+  padding: 0 var(--ot-spacing-padding-xl) var(--ot-spacing-padding-xl);
 }
 
 /* ── Delivery widget (drawer body) ── */
@@ -299,14 +373,12 @@ p { text-wrap: pretty; }
 }
 .kpis > .ot-divider--vertical { align-self: stretch; }
 .kpis__row-divider { grid-column: 1 / -1; }
+/* 16 block; column 1 gets 24 right, column 2 gets 24 left. */
 .kpis__cell {
   min-width: 0;
-  padding: var(--ot-spacing-padding-lg) var(--ot-spacing-padding-xl);
+  padding: var(--ot-spacing-padding-lg) var(--ot-spacing-padding-xl) var(--ot-spacing-padding-lg) 0;
 }
-.kpis__cell:nth-child(1), .kpis__cell:nth-child(3) { padding-top: 0; }
-.kpis__cell:nth-child(5), .kpis__cell:nth-child(7) { padding-bottom: 0; }
-.kpis__cell:nth-child(1), .kpis__cell:nth-child(5) { padding-left: 0; }
-.kpis__cell:nth-child(3), .kpis__cell:nth-child(7) { padding-right: 0; }
+.kpis__cell:nth-child(3), .kpis__cell:nth-child(7) { padding: var(--ot-spacing-padding-lg) 0 var(--ot-spacing-padding-lg) var(--ot-spacing-padding-xl); }
 .kpis .ot-stat__secondary {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -319,13 +391,14 @@ p { text-wrap: pretty; }
 }
 
 .delivery__note {
-  margin-top: var(--ot-spacing-gap-lg);
+  margin-top: var(--ot-spacing-gap-sm);
   color: var(--ot-color-text-primary);
   font-size: var(--ot-typography-body-sm-font-size);
   line-height: var(--ot-typography-body-sm-line-height);
 }
 .delivery__chart-title {
-  margin-bottom: var(--ot-spacing-gap-md);
+  margin-top: var(--ot-spacing-gap-xl);
+  margin-bottom: var(--ot-spacing-gap-sm);
   font-size: var(--ot-typography-label-md-font-size);
   line-height: var(--ot-typography-label-md-line-height);
   font-weight: var(--ot-typography-label-md-font-weight);
@@ -366,7 +439,7 @@ p { text-wrap: pretty; }
   font-size: var(--ot-typography-body-sm-font-size);
   font-variant-numeric: tabular-nums;
 }
-/* Halo in the surface colour keeps direct labels legible where they cross grid, guarantee or Today lines. */
+/* Halo in the surface colour keeps direct labels legible where they cross grid, goal or Today lines. */
 .chart__label {
   font-variant-numeric: tabular-nums;
   paint-order: stroke;

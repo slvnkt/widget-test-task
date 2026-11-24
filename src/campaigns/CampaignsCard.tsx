@@ -6,6 +6,7 @@ import type { Period } from '../data/period'
 import type { Campaign } from '../data/rows'
 import { UPDATED_AT } from '../widget/copy'
 import { CampaignsTable } from './CampaignsTable'
+import { Pagination } from './Pagination'
 
 export type ListState = 'ready' | 'loading' | 'error' | 'empty'
 
@@ -21,14 +22,18 @@ interface Props {
   onOpen: (id: string) => void
   onRetry: () => void
   onClearFilters: () => void
+  /** Search text, for the no-match message. */
+  query: string
 }
 
-export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChange, selectedId, onOpen, onRetry, onClearFilters }: Props) {
+export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChange, selectedId, onOpen, onRetry, onClearFilters, query }: Props) {
   const loading = state === 'loading'
 
   return (
     <Card variant="default" padding="lg" className="campaigns">
+      {/* Fixed 24px row: the update time sits inline after the title and its absence never shifts the layout. */}
       <CardHeader
+        className="campaigns__header"
         title="Delivery by campaign"
         titleAs="h2"
         action={state === 'ready' && <span className="campaigns__updated">{UPDATED_AT}</span>}
@@ -45,9 +50,12 @@ export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChan
         ) : state === 'empty' ? (
           <EmptyState variant="no-data" title="No campaigns yet" description="Campaigns appear here once a media plan is booked." />
         ) : !loading && rows.length === 0 ? (
-          <EmptyState size="compact" title="No campaigns match these filters" actions={<Button variant="secondary" size="sm" onClick={onClearFilters}>Clear filters</Button>} />
+          <EmptyState size="compact" title={query ? `No campaigns match "${query}"` : 'No campaigns match these filters'} actions={<Button variant="secondary" size="sm" onClick={onClearFilters}>Clear filters</Button>} />
         ) : (
-          <CampaignsTable rows={rows} period={period} sort={sort} onSortChange={onSortChange} selectedId={selectedId} onOpen={onOpen} loading={loading} showBrand={showBrand} />
+          <>
+            <CampaignsTable rows={rows} period={period} sort={sort} onSortChange={onSortChange} selectedId={selectedId} onOpen={onOpen} loading={loading} showBrand={showBrand} />
+            {!loading && <Pagination total={rows.length} />}
+          </>
         )}
       </div>
     </Card>
