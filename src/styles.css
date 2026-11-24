@@ -395,7 +395,7 @@ p { text-wrap: pretty; }
 .kpis {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ot-spacing-gap-md);
+  gap: var(--ot-spacing-gap-sm); /* tight: the four tiles read as one group */
   padding-top: var(--ot-spacing-gap-sm);
 }
 .kpis__card { min-width: 0; }
@@ -417,15 +417,16 @@ p { text-wrap: pretty; }
   line-height: var(--ot-typography-body-sm-line-height);
 }
 .delivery > .delivery__chart { /* beats the DS card margin reset */
-  margin-top: var(--ot-spacing-gap-md);
+  margin-top: var(--ot-spacing-gap-xl); /* section break after the KPI group */
   gap: var(--ot-spacing-gap-md);
 }
 
 /* Chart legend (replaces the direct series labels): solid fill, hatch, dotted line, dashed line + band. */
 .chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ot-spacing-gap-xs) var(--ot-spacing-gap-lg);
+  /* 2 even columns: the four labels don't fit one row in the 560px card. */
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: var(--ot-spacing-gap-sm) var(--ot-spacing-gap-xl);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -435,30 +436,7 @@ p { text-wrap: pretty; }
   font-variant-numeric: tabular-nums;
 }
 .chart-legend li { display: inline-flex; align-items: center; gap: var(--ot-spacing-gap-sm); }
-.chart-legend__swatch {
-  position: relative;
-  flex: none;
-  width: var(--ot-space-4);
-  height: var(--ot-space-3);
-}
-.chart-legend__swatch--confirmed {
-  background: var(--ot-color-data-track);
-  border-top: var(--ot-shape-border-width-md) solid var(--ot-color-data-confirmed);
-}
-.chart-legend__swatch--prelim {
-  background: repeating-linear-gradient(-45deg, var(--ot-pattern-hatch-color) 0 var(--ot-pattern-hatch-width), transparent var(--ot-pattern-hatch-width) calc(var(--ot-pattern-hatch-width) + var(--ot-pattern-hatch-gap)));
-  border-top: var(--ot-shape-border-width-md) dashed var(--ot-color-data-preliminary);
-}
-.chart-legend__swatch--plan::after,
-.chart-legend__swatch--forecast::after {
-  content: '';
-  position: absolute;
-  inset: 50% 0 auto;
-  transform: translateY(-50%);
-}
-.chart-legend__swatch--plan::after { border-top: var(--ot-shape-border-width-md) dotted var(--ot-color-chart-3); }
-.chart-legend__swatch--forecast { background: var(--ot-color-bg-tertiary); }
-.chart-legend__swatch--forecast::after { border-top: var(--ot-shape-border-width-md) dashed var(--ot-color-data-projected); }
+.chart-legend__swatch { flex: none; display: block; }
 
 /* Gap header tooltip: fixed below, right-aligned to the term, so it stays inside the viewport and never shifts. */
 .gap-header .ot-tooltip--floating { left: auto; right: 0; transform: none; }

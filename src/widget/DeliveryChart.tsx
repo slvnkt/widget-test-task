@@ -6,6 +6,8 @@ import { ChartContainer, ChartTooltip, type ChartConfig } from './chart'
 import { signedM } from './copy'
 
 const HEIGHT = 240
+// Forecast range = data-track at --ot-opacity-60 (SVG fill-opacity attributes can't read the token).
+const BAND_OPACITY = 0.6
 // At the drawer's ~630px plot, ticks every two weeks (weekly ticks would crowd).
 const X_TICK_DAYS = [0, 14, 28, CAMPAIGN.flightDays - 1]
 
@@ -20,7 +22,8 @@ const config: ChartConfig = {
   confirmed: { label: 'Confirmed', color: 'var(--ot-color-data-confirmed)' },
   prelim: { label: 'Preliminary', color: 'var(--ot-color-data-preliminary)' },
   plan: { label: 'Plan', color: 'var(--ot-color-chart-3)' },
-  projection: { label: 'Forecast', color: 'var(--ot-color-data-projected)' },
+  // Violet like the delivered series (it continues them), told apart from the grey dotted Plan by colour, not only by dash.
+  projection: { label: 'Forecast', color: 'var(--ot-color-chart-1)' },
 }
 
 type Row = Model['daily'][number] & { band?: [number, number] }
@@ -109,6 +112,40 @@ function DeliveryTooltip({ active, payload, m }: { active?: boolean; payload?: A
   return <TooltipContent variant="light" title={row.label} rows={tooltipRows(row, m)} />
 }
 
+// Legend swatches: 16×10 inline SVGs drawn with the chart's own strokes and fills, so they match the series pixel for pixel.
+function Swatch({ kind, hatch }: { kind: 'confirmed' | 'prelim' | 'plan' | 'forecast'; hatch?: { width: number; gap: number } }) {
+  const id = useId()
+  const step = hatch ? hatch.width + hatch.gap : 6
+  return (
+    <svg className="chart-legend__swatch" width="16" height="10" viewBox="0 0 16 10" aria-hidden="true">
+      {kind === 'confirmed' && (
+        <>
+          <rect y="1" width="16" height="9" fill="var(--ot-color-data-track)" />
+          <line x1="0" x2="16" y1="1" y2="1" stroke="var(--ot-color-data-confirmed)" strokeWidth="1.5" />
+        </>
+      )}
+      {kind === 'prelim' && (
+        <>
+          <defs>
+            <pattern id={id} width={step} height={step} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width={hatch?.width ?? 2} height={step} style={{ fill: 'var(--ot-pattern-hatch-color)' }} />
+            </pattern>
+          </defs>
+          <rect y="1" width="16" height="9" fill={`url(#${id})`} />
+          <line x1="0" x2="16" y1="1" y2="1" stroke="var(--ot-color-data-preliminary)" strokeWidth="1.5" strokeDasharray="2 3" />
+        </>
+      )}
+      {kind === 'plan' && <line x1="1" x2="15" y1="5" y2="5" stroke="var(--ot-color-chart-3)" strokeWidth="1.5" strokeDasharray="1 3" strokeLinecap="round" />}
+      {kind === 'forecast' && (
+        <>
+          <rect width="16" height="10" fill="var(--ot-color-data-track)" fillOpacity={BAND_OPACITY} />
+          <line x1="0" x2="16" y1="5" y2="5" stroke="var(--ot-color-chart-1)" strokeWidth="2" strokeDasharray="6 4" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 /** `area`: highlighted period window in model day indexes (§3.3), drawn under the series. */
 export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: number; x2: number } | null; areaLabel?: string }) {
   const hatchId = useId()
@@ -146,12 +183,13 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
           content={<DeliveryTooltip m={m} />}
         />
 
-        <Area dataKey="band" stroke="none" fill="var(--ot-color-bg-tertiary)" fillOpacity={1} activeDot={false} isAnimationActive={false} />
-        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Goal ${+m.guarantee.toFixed(1)}M`} anchor={goalAtEnd ? 'end' : 'start'} atEnd={goalAtEnd} dy={-6} />} />
+        {/* Order = paint order: forecast range, plan, delivered areas, goal, forecast line on top. */}
+        <Area dataKey="band" stroke="none" fill="var(--ot-color-data-track)" fillOpacity={BAND_OPACITY} activeDot={false} isAnimationActive={false} />
         <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="1 3" strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} />
         <Area dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} fill="var(--ot-color-data-track)" fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Area dataKey="prelim" type="monotone" stroke="var(--color-prelim)" strokeWidth={2} strokeDasharray="2 3" strokeLinecap="round" fill={`url(#${hatchId})`} fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
-        <Line dataKey="projection" type="linear" stroke="var(--color-projection)" strokeWidth={1.5} strokeDasharray="6 4" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Goal ${+m.guarantee.toFixed(1)}M`} anchor={goalAtEnd ? 'end' : 'start'} atEnd={goalAtEnd} dy={-6} />} />
+        <Line dataKey="projection" type="linear" stroke="var(--color-projection)" strokeWidth={2} strokeDasharray="6 4" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
         {vLine && (
           <ReferenceLine x={vLine.x} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={vLine.text} anchor="middle" dy={-8} tone="primary" />} />
         )}
@@ -159,10 +197,10 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
       </ComposedChart>
     </ChartContainer>
     <ul className="chart-legend" aria-label="Legend">
-      {m.confirmed > 0 && <li><span className="chart-legend__swatch chart-legend__swatch--confirmed" aria-hidden="true" />Confirmed</li>}
-      {m.prelim > 0 && <li><span className="chart-legend__swatch chart-legend__swatch--prelim" aria-hidden="true" />Preliminary</li>}
-      <li><span className="chart-legend__swatch chart-legend__swatch--plan" aria-hidden="true" />Plan</li>
-      {last.band && <li><span className="chart-legend__swatch chart-legend__swatch--forecast" aria-hidden="true" />Forecast {m.projLow.toFixed(1)}–{fmtM(m.projHigh)}</li>}
+      {m.confirmed > 0 && <li><Swatch kind="confirmed" />Confirmed (network logs)</li>}
+      {m.prelim > 0 && <li><Swatch kind="prelim" hatch={hatch} />Preliminary (smart-TV estimate)</li>}
+      <li><Swatch kind="plan" />Plan</li>
+      {last.band && <li><Swatch kind="forecast" />Forecast · {m.projLow.toFixed(1)}–{fmtM(m.projHigh)}</li>}
     </ul>
     </>
   )
