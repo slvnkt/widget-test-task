@@ -15,12 +15,12 @@ function Glyph({ glyph }: { glyph: StatusGlyph }) {
   switch (glyph) {
     // Phosphor circles are 208/256 of the box; scaled in CSS to the 13px outer size of the custom rings.
     case 'arrow-up': return <ArrowCircleUp weight="fill" className="status-icon__ph" />
-    // Linear-style "in progress" yellow: filled disc, arrow in the dark on-warning colour (the arrow carries the contrast).
+    // Linear-style "in progress" yellow: filled disc, white arrow (user request).
     case 'arrow-down':
       return (
         <svg viewBox="0 0 14 14" fill="none">
           <circle cx="7" cy="7" r="6.5" fill="currentColor" />
-          <path d="M7 3.75v6M4.5 7.5 7 10l2.5-2.5" stroke="var(--ot-color-status-warning-on-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M7 3.75v6M4.5 7.5 7 10l2.5-2.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )
     case 'warning': return <WarningCircle weight="fill" className="status-icon__ph" />

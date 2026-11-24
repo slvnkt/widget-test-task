@@ -209,9 +209,6 @@ export function App() {
         footerItems={NAV_FOOTER}
         bottom={
           <>
-            <div className="proto" role="group" aria-label="Prototype controls">
-              <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
-            </div>
             {/* Vertical pill; the active theme's button is the raised circle. */}
             <div className="theme-pill" role="group" aria-label="Theme">
               <IconButton variant="ghost" size="sm" icon={<Moon />} label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} />
@@ -221,8 +218,15 @@ export function App() {
         }
       />
 
+      <div className="proto-float" role="group" aria-label="Prototype controls">
+        <span>Prototype</span>
+        <div className="proto">
+          <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
+        </div>
+      </div>
+
       <main className="main">
-        {/* Sticky so the filters stay visible at any scroll; the drawer layers above it. */}
+        
         <div className="page-top">
           <PageHeader title="Dashboard" />
           {LIST_STATE[proto] !== 'empty' && (

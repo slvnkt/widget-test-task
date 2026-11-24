@@ -4,12 +4,12 @@ html[data-theme='dark'] { color-scheme: dark; }
 
 /* Status glyph colours that differ by theme (TEMP until --ot-color-status-icon-* tokens exist; see campaigns/status.ts). */
 :root, [data-theme='light'] {
-  --status-icon-behind: var(--ot-palette-warning-500);
+  --status-icon-behind: #EAB308; /* TEMP saturated yellow, no DS token */
   --status-icon-paused: var(--ot-palette-neutral-800);
   --status-icon-cancelled: var(--ot-color-text-disabled);
 }
 [data-theme='dark'] {
-  --status-icon-behind: var(--ot-palette-warning-400);
+  --status-icon-behind: #EAB308; /* TEMP */
   --status-icon-paused: var(--ot-palette-neutral-200); /* 10.5:1 on dark; neutral-800 would be 1.5:1 */
   --status-icon-cancelled: var(--ot-palette-neutral-500); /* 4.1:1; text-disabled is 2.9:1 on dark */
 }
@@ -42,9 +42,6 @@ p { text-wrap: pretty; }
 }
 /* Page title + filter bar stay on top while the page scrolls; the drawer layers above it. */
 .page-top {
-  position: sticky;
-  top: 0;
-  z-index: 25; /* above the table; below the drawer (28); no layer tokens yet */
   display: flex;
   flex-direction: column;
   gap: var(--ot-spacing-gap-lg);
@@ -64,7 +61,7 @@ p { text-wrap: pretty; }
   gap: var(--ot-spacing-gap-sm);
 }
 /* Select widths from the design-director handoff, no tokens */
-.filter-bar > .filter-bar__search { width: 240px; }
+.filter-bar > .filter-bar__search { width: 240px; margin-left: auto; order: 2; } /* filters left, search pinned right */
 .filter-bar > .filter-bar__period { width: 168px; }
 .filter-bar > .filter-bar__status { width: 184px; }
 
@@ -267,13 +264,7 @@ p { text-wrap: pretty; }
 .campaigns-table .ot-table { table-layout: fixed; }
 /* Fixed columns fit the card (no horizontal scroll), so the wrap can let the Delivered tooltip overflow instead of clipping it. */
 .campaigns-table.ot-table-wrap { overflow: visible; }
-/* Head sticks under the sticky page top (needs the visible overflow above). */
-.campaigns-table thead th {
-  position: sticky;
-  top: var(--page-top-height);
-  z-index: 1;
-  background: var(--ot-color-bg-primary);
-}
+
 
 /* Delivered: ring 20 → 8 → "17.9M" (label-md, primary) + " of 48.0M" (body-sm, secondary). */
 .delivered-cell__anchor { max-width: 100%; }
@@ -551,3 +542,17 @@ p { text-wrap: pretty; }
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* +2px top/bottom in campaigns rows */
+.campaigns-table.ot-table-wrap { --_row: calc(var(--ot-table-size-md-row-height) + 4px); }
+
+/* Prototype control: floating dev panel, clearly not product UI */
+.proto-float {
+  position: fixed; left: 50%; bottom: var(--ot-space-4); transform: translateX(-50%);
+  z-index: 40; display: flex; align-items: center; gap: var(--ot-spacing-gap-sm);
+  padding: var(--ot-spacing-padding-xs) var(--ot-spacing-padding-xs) var(--ot-spacing-padding-xs) var(--ot-spacing-padding-md);
+  background: var(--ot-color-bg-inverse); color: var(--ot-color-text-inverse);
+  border-radius: var(--ot-shape-radius-full); box-shadow: var(--ot-shadow-lg);
+  font-size: var(--ot-typography-label-sm-font-size); font-weight: var(--ot-typography-label-sm-font-weight);
+}
+.proto-float .proto { width: 220px; }
