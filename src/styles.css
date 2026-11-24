@@ -442,8 +442,10 @@ p { text-wrap: pretty; }
 .gap-header .ot-tooltip--floating { left: auto; right: 0; transform: none; }
 .gap-header .ot-tooltip__arrow { left: auto !important; right: calc(var(--ot-space-3) - 4px); }
 
-/* Sources: info tooltips open upward and are not clipped by (or scrolled inside) the table wrap. */
+/* Sources: info tooltips are not clipped by (or scrolled inside) the table wrap. */
 .details__sources.ot-table-wrap { overflow: visible; }
+/* Opens to the right of the icon (near the drawer's left edge) and wraps instead of running out of the drawer. */
+.source-cell__tooltip.ot-tooltip { width: max-content; max-width: 360px; } /* tooltip measure, no token */
 .details { margin-top: var(--ot-spacing-gap-xl); }
 .details .ot-tabs__panel { padding-top: var(--ot-spacing-gap-lg); }
 

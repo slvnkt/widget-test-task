@@ -32,7 +32,7 @@ const sourceColumns: TableColumn<SourceRow>[] = [
     render: r => (
       <span className="source-cell">
         {r.source}
-        <Tooltip text={r.what} placement="top">
+        <Tooltip text={r.what} placement="right" className="source-cell__tooltip">
           <button type="button" className="source-cell__info" aria-label={`About ${r.source}`}><Info /></button>
         </Tooltip>
       </span>
