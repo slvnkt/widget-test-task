@@ -550,13 +550,13 @@ p { text-wrap: pretty; }
 
 /* Prototype control: floating dev panel, clearly not product UI */
 .proto-float {
-  position: fixed; left: 50%; bottom: var(--ot-space-5); transform: translateX(-50%);
-  z-index: 40; display: flex; align-items: center; gap: var(--ot-spacing-gap-md);
-  padding: var(--ot-spacing-padding-sm) var(--ot-spacing-padding-sm) var(--ot-spacing-padding-sm) var(--ot-spacing-padding-lg);
+  /* Bottom-left over the sidebar, right of the theme pill: never over the table or the drawer. */
+  position: fixed; left: 72px; bottom: var(--ot-space-6);
+  z-index: 40; display: flex; flex-direction: column; gap: var(--ot-spacing-gap-xs);
+  width: 176px; padding: var(--ot-spacing-padding-sm);
   background: var(--ot-color-bg-tertiary); color: var(--ot-color-text-secondary);
   border: var(--ot-shape-border-width-sm) solid var(--ot-color-border-primary);
-  border-radius: var(--ot-shape-radius-xl); box-shadow: var(--ot-shadow-lg);
+  border-radius: var(--ot-shape-radius-lg); box-shadow: var(--ot-shadow-md);
   font-size: var(--ot-typography-label-sm-font-size); font-weight: var(--ot-typography-label-sm-font-weight);
 }
-.proto-float__label { letter-spacing: .04em; text-transform: uppercase; }
-.proto-float .proto { width: 220px; }
+.proto-float .proto { width: 100%; }
