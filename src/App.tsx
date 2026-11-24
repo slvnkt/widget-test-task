@@ -219,7 +219,7 @@ export function App() {
       />
 
       <div className="proto-float" role="group" aria-label="Prototype controls">
-        <span>Prototype</span>
+        <span className="proto-float__label">Prototype</span>
         <div className="proto">
           <Select size="sm" aria-label="Prototype state" value={proto} onValueChange={v => setProto(v as ProtoState)} options={PROTO_OPTIONS} />
         </div>

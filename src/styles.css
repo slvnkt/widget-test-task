@@ -548,11 +548,13 @@ p { text-wrap: pretty; }
 
 /* Prototype control: floating dev panel, clearly not product UI */
 .proto-float {
-  position: fixed; left: 50%; bottom: var(--ot-space-4); transform: translateX(-50%);
-  z-index: 40; display: flex; align-items: center; gap: var(--ot-spacing-gap-sm);
-  padding: var(--ot-spacing-padding-xs) var(--ot-spacing-padding-xs) var(--ot-spacing-padding-xs) var(--ot-spacing-padding-md);
-  background: var(--ot-color-bg-inverse); color: var(--ot-color-text-inverse);
-  border-radius: var(--ot-shape-radius-full); box-shadow: var(--ot-shadow-lg);
+  position: fixed; left: 50%; bottom: var(--ot-space-5); transform: translateX(-50%);
+  z-index: 40; display: flex; align-items: center; gap: var(--ot-spacing-gap-md);
+  padding: var(--ot-spacing-padding-sm) var(--ot-spacing-padding-sm) var(--ot-spacing-padding-sm) var(--ot-spacing-padding-lg);
+  background: var(--ot-color-bg-tertiary); color: var(--ot-color-text-secondary);
+  border: var(--ot-shape-border-width-sm) solid var(--ot-color-border-primary);
+  border-radius: var(--ot-shape-radius-xl); box-shadow: var(--ot-shadow-lg);
   font-size: var(--ot-typography-label-sm-font-size); font-weight: var(--ot-typography-label-sm-font-weight);
 }
+.proto-float__label { letter-spacing: .04em; text-transform: uppercase; }
 .proto-float .proto { width: 220px; }
