@@ -7,9 +7,10 @@ interface Props {
   value: string
   onChange: (value: string) => void
   className?: string
+  disabled?: boolean
 }
 
-export function SearchField({ value, onChange, className }: Props) {
+export function SearchField({ value, onChange, className, disabled }: Props) {
   const input = useRef<HTMLInputElement>(null)
   return (
     <div className={['search', value && 'search--filled', className].filter(Boolean).join(' ')}>
@@ -23,8 +24,9 @@ export function SearchField({ value, onChange, className }: Props) {
         onChange={e => onChange(e.target.value)}
         autoComplete="off"
         spellCheck={false}
+        disabled={disabled}
       />
-      {value && (
+      {value && !disabled && (
         <button
           type="button"
           className="search__clear"

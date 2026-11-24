@@ -1,8 +1,8 @@
-// Campaigns page rows: 13 fictional campaigns, one per scenario of the shared model.
+// Campaigns page rows: 14 fictional campaigns, one per scenario of the shared model.
 // Every row shares the real today (Nov 23): its flight starts `startOffset` days after Nov 3.
 import { buildModel, CAMPAIGN, SCENARIOS, type Model } from './campaign'
 
-export type DataMarker = 'Revised' | 'Logs late' | 'No ACR'
+export type DataMarker = 'Revised' | 'Logs late' | 'Logs only'
 
 export interface CampaignRow {
   id: string
@@ -30,10 +30,11 @@ const ROWS: CampaignRow[] = [
   { id: 'gift-guide', brand: 'Northwind Coffee', name: 'Holiday Gift Guide', scenarioId: 'just-launched', guarantee: 36 },
   { id: 'peppermint', brand: 'Northwind Coffee', name: 'Peppermint Mocha', scenarioId: 'revised', guarantee: 44, dataMarker: 'Revised' },
   { id: 'pinecrest', brand: 'Pinecrest Travel', name: 'Winter Getaways', scenarioId: 'logs-late', guarantee: 28, dataMarker: 'Logs late' },
-  { id: 'ostara', brand: 'Ostara Bakery', name: 'Winter Comfort', scenarioId: 'acr-unavailable', guarantee: 50, dataMarker: 'No ACR' },
+  { id: 'ostara', brand: 'Ostara Bakery', name: 'Winter Comfort', scenarioId: 'acr-unavailable', guarantee: 50, dataMarker: 'Logs only' },
   { id: 'brightline', brand: 'Brightline Mobile', name: 'Black Friday Push', scenarioId: 'ahead', guarantee: 32 },
   { id: 'new-year', brand: 'Northwind Coffee', name: 'New Year Mornings', scenarioId: 'scheduled', guarantee: 40 },
   { id: 'pumpkin-spice', brand: 'Northwind Coffee', name: 'Pumpkin Spice Fall', scenarioId: 'final-met', guarantee: 30 },
+  { id: 'flu-season', brand: 'Juniper Health', name: 'Flu Season Reminder', scenarioId: 'cancelled', guarantee: 26 },
 ]
 
 /** Day index of the real today (Nov 23) on the Nov 3 calendar. */

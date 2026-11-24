@@ -237,8 +237,8 @@ export function buildModel(def: ScenarioDef, { scale = 1, startOffset = 0 }: Mod
   const networks: Model['networks'] = names.map((name, i): Model['networks'][number] => {
     const scheduled = netSpots[i]
     const pre = i < preempted ? Math.min(1, scheduled) : 0
-    if (i >= networksTotal - late) return { name, status: 'late', through: `No logs since ${fmt(def.lastLogDay ?? -1)}`, aired: scheduled - pre, scheduled, preempted: pre }
-    if (i >= logsReceived) return { name, status: 'pending', through: confirmedThrough >= 3 ? `${fmt(confirmedThrough - 3)} · usually 5–10 days` : 'Expected in 5–10 days', aired: scheduled - pre, scheduled, preempted: pre }
+    if (i >= networksTotal - late) return { name, status: 'late', through: (def.lastLogDay ?? -1) < 0 ? 'No logs yet' : `No logs since ${fmt(def.lastLogDay ?? -1)}`, aired: scheduled - pre, scheduled, preempted: pre }
+    if (i >= logsReceived) return { name, status: 'pending', through: confirmedThrough >= 3 ? fmt(confirmedThrough - 3) : '—', aired: scheduled - pre, scheduled, preempted: pre }
     return { name, status: 'received', through: fmt(confirmedThrough), aired: scheduled - pre, scheduled, preempted: pre }
   }).sort((a, b) => rank[a.status] - rank[b.status])
 

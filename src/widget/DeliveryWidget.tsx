@@ -23,7 +23,7 @@ function tile1(m: Model): StatProps {
   const withBadge = (text?: ReactNode) => (
     <span className="kpis__status">
       <StatusIcon status={m.status} label />
-      {text && <span>· {text}</span>}
+      {text && <span>{'\u00a0· '}{text}</span>}
     </span>
   )
   const N = CAMPAIGN.flightDays
@@ -34,7 +34,7 @@ function tile1(m: Model): StatProps {
       // tooEarly in the model lasts until day 3 of the flight
       return { label: 'Projected at flight end', value: '—', secondary: withBadge(`First forecast on ${m.fmt(3)}`), hint: HINTS.projected }
     case 'paused':
-      return { label: 'Paused since', value: m.fmt(m.def.stopDay ?? m.def.today), secondary: withBadge('Forecast hidden while paused') }
+      return { label: 'Projected at flight end', value: '—', secondary: withBadge(`since ${m.fmt(m.def.stopDay ?? m.def.today)}`), hint: HINTS.projected }
     case 'cancelled':
       return { label: 'Stopped on', value: m.fmt(m.def.stopDay ?? m.def.today), secondary: withBadge() }
     case 'finalizing':
@@ -67,7 +67,7 @@ function tile2(c: Campaign, period: Period): StatProps {
     return { label, value: fmtM(r.delivered), secondary, hint: HINTS.delivered }
   }
   if (m.phase === 'finalized') {
-    return { label: 'Delivered', value: fmtM(m.delivered), secondary: m.status === 'final-under' && gap ? `${signedM(gap.value)} short` : undefined, hint: HINTS.delivered }
+    return { label: 'Delivered', value: fmtM(m.delivered), secondary: m.status === 'final-under' && gap ? `${fmtM(Math.abs(gap.value))} short of goal` : undefined, hint: HINTS.delivered }
   }
   const noGap: Partial<Record<Model['status'], string>> = {
     'too-early': 'Preliminary only',
@@ -134,7 +134,7 @@ export function DeliveryWidget({ c, period, state, onRetry }: { c: Campaign; per
         variant="error"
         size="compact"
         title="Couldn't load this campaign"
-        description="The list is fine; only this campaign's details failed."
+        description="Check your connection and try again."
         actions={<Button variant="secondary" size="sm" onClick={onRetry}>Retry</Button>}
       />
     )

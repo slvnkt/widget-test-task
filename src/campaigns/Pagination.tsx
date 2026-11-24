@@ -11,7 +11,7 @@ export function Pagination({ total }: { total: number }) {
   const single = total <= PAGE_SIZE
   return (
     <nav className="pagination" aria-label="Pagination">
-      <span className="pagination__range">{total === 0 ? '0 of 0' : `1–${end} of ${total}`}</span>
+      <span className="pagination__range" aria-live="polite">{total === 0 ? '0 of 0' : `1–${end} of ${total}`}</span>
       <span className="pagination__buttons">
         <IconButton variant="ghost" size="sm" icon={<CaretLeft />} label="Previous page" disabled />
         <IconButton variant="ghost" size="sm" icon={<CaretRight />} label="Next page" disabled={single} />

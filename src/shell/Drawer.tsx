@@ -29,8 +29,12 @@ export function Drawer({ open, title, description, onClose, titleRef, children }
 
   useEffect(() => {
     if (!open) return
+    // Esc closes only from the drawer, the page body or the table rows/cells: in a field or select it belongs to that control.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const a = document.activeElement
+      const fromHere = !a || a === document.body || !!a.closest('.drawer, .campaigns-table tbody')
+      if (fromHere) onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)

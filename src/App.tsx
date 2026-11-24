@@ -32,16 +32,17 @@ const NAV_FOOTER: NavLink[] = [
 ]
 
 // Prototype control: system states only; lifecycle and data states are the table rows.
-type ProtoState = 'live' | 'loading' | 'error' | 'empty' | 'details-loading' | 'details-error'
+type ProtoState = 'live' | 'loading' | 'error' | 'empty' | 'stale' | 'details-loading' | 'details-error'
 const PROTO_OPTIONS: Array<{ value: ProtoState; label: string }> = [
   { value: 'live', label: 'Live data' },
   { value: 'loading', label: 'Loading' },
   { value: 'error', label: 'Error' },
   { value: 'empty', label: 'No campaigns' },
+  { value: 'stale', label: "Couldn't refresh" },
   { value: 'details-loading', label: 'Campaign details loading' },
   { value: 'details-error', label: 'Campaign details error' },
 ]
-const LIST_STATE: Record<ProtoState, ListState> = { live: 'ready', loading: 'loading', error: 'error', empty: 'empty', 'details-loading': 'ready', 'details-error': 'ready' }
+const LIST_STATE: Record<ProtoState, ListState> = { live: 'ready', loading: 'loading', error: 'error', empty: 'empty', stale: 'stale', 'details-loading': 'ready', 'details-error': 'ready' }
 const DETAILS_STATE: Partial<Record<ProtoState, DetailsState>> = { 'details-loading': 'loading', 'details-error': 'error' }
 
 // Account scope: brand marketers see one advertiser; agency users and Simulmedia AMs can pick All advertisers.
@@ -157,7 +158,7 @@ export function App() {
     returnTo.current = null
     const c = CAMPAIGNS.find(x => x.id === id)
     if (!c) return
-    const row = document.querySelector<HTMLElement>(`.campaigns-table tr[aria-label="${CSS.escape(rowLabel(c))}"]`)
+    const row = document.querySelector<HTMLElement>(`.campaigns-table tr[aria-label^="${CSS.escape(`${rowLabel(c)}.`)}"]`)
     const target = row ?? document.querySelector<HTMLElement>('.campaigns .ot-card__title')
     if (target && !row) target.tabIndex = -1
     target?.focus()
@@ -170,10 +171,13 @@ export function App() {
     })
   }, [])
   // A filter or advertiser change that hides the open campaign closes the drawer (focus goes to the card title).
+  // So does switching the list to Error or No campaigns (there is no row to belong to).
+  const listGone = LIST_STATE[proto] === 'error' || LIST_STATE[proto] === 'empty'
   useEffect(() => {
-    if (campaignId && !rows.some(c => c.id === campaignId)) close()
-  }, [campaignId, rows, close])
+    if (campaignId && (listGone || !rows.some(c => c.id === campaignId))) close()
+  }, [campaignId, rows, close, listGone])
   const retry = useCallback(() => setProto('live'), [])
+  const filtersOff = LIST_STATE[proto] === 'error'
 
   return (
     <div className="app">
@@ -188,12 +192,13 @@ export function App() {
         {/* Sticky so the filters stay visible at any scroll; the drawer layers above it. */}
         <div className="page-top">
           <PageHeader title="Campaigns" />
-          {(LIST_STATE[proto] === 'ready' || LIST_STATE[proto] === 'loading') && (
+          {LIST_STATE[proto] !== 'empty' && (
             <div className="filter-bar" role="group" aria-label="Filters">
-              <SearchField className="filter-bar__search" value={query} onChange={setQuery} />
-              <Select size="sm" aria-label="Period" className="filter-bar__period" value={period} onValueChange={v => setPeriod(v as Period)} options={PERIOD_OPTIONS} />
-              <Select size="sm" aria-label="Status" className="filter-bar__status" value={statusFilter} onValueChange={setStatusFilter} options={statusOptions(scoped)} />
-              {filtered && <Button variant="ghost" size="sm" onClick={clearFilters}>Clear filters</Button>}
+              {/* Error: the bar stays in place (no layout jump), disabled until the list loads. */}
+              <SearchField className="filter-bar__search" value={query} onChange={setQuery} disabled={filtersOff} />
+              <Select size="sm" aria-label="Period" className="filter-bar__period" value={period} onValueChange={v => setPeriod(v as Period)} options={PERIOD_OPTIONS} disabled={filtersOff} />
+              <Select size="sm" aria-label="Status" className="filter-bar__status" value={statusFilter} onValueChange={setStatusFilter} options={statusOptions(scoped)} disabled={filtersOff} />
+              {filtered && <Button variant="ghost" size="sm" onClick={clearFilters} disabled={filtersOff}>Clear filters</Button>}
             </div>
           )}
         </div>

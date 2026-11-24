@@ -1,14 +1,16 @@
+import { MagnifyingGlass } from '@phosphor-icons/react'
 import { Button } from '@ds/components/Button'
 import { Card, CardHeader } from '@ds/components/Card'
 import { EmptyState } from '@ds/components/EmptyState'
 import type { TableSort } from '@ds/components/Table'
 import type { Period } from '../data/period'
 import type { Campaign } from '../data/rows'
-import { UPDATED_AT } from '../widget/copy'
+import { STALE_AT, UPDATED_AT } from '../widget/copy'
 import { CampaignsTable } from './CampaignsTable'
 import { Pagination } from './Pagination'
 
-export type ListState = 'ready' | 'loading' | 'error' | 'empty'
+/** `stale`: refresh failed, the cached table stays (muted) with an inline retry line. */
+export type ListState = 'ready' | 'loading' | 'error' | 'empty' | 'stale'
 
 interface Props {
   rows: Campaign[]
@@ -28,9 +30,10 @@ interface Props {
 
 export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChange, selectedId, onOpen, onRetry, onClearFilters, query }: Props) {
   const loading = state === 'loading'
+  const stale = state === 'stale'
 
   return (
-    <Card variant="default" padding="lg" className="campaigns">
+    <Card variant="default" padding="lg" className={['campaigns', stale && 'campaigns--stale'].filter(Boolean).join(' ')}>
       {/* Fixed 24px row: the update time sits inline after the title and its absence never shifts the layout. */}
       <CardHeader
         className="campaigns__header"
@@ -38,6 +41,13 @@ export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChan
         titleAs="h2"
         action={state === 'ready' && <span className="campaigns__updated">{UPDATED_AT}</span>}
       />
+
+      {stale && (
+        <p className="campaigns__stale" role="status">
+          Couldn't refresh. Showing data from {STALE_AT}.
+          <Button variant="ghost" size="sm" onClick={onRetry}>Retry</Button>
+        </p>
+      )}
 
       <div className="campaigns__body">
         {state === 'error' ? (
@@ -50,7 +60,7 @@ export function CampaignsCard({ rows, state, period, showBrand, sort, onSortChan
         ) : state === 'empty' ? (
           <EmptyState variant="no-data" title="No campaigns yet" description="Campaigns appear here once a media plan is booked." />
         ) : !loading && rows.length === 0 ? (
-          <EmptyState size="compact" title={query ? `No campaigns match "${query}"` : 'No campaigns match these filters'} actions={<Button variant="secondary" size="sm" onClick={onClearFilters}>Clear filters</Button>} />
+          <EmptyState size="compact" icon={<MagnifyingGlass />} title={query ? `No campaigns match "${query}"` : 'No campaigns match these filters'} actions={<Button variant="secondary" size="sm" onClick={onClearFilters}>Clear filters</Button>} />
         ) : (
           <>
             <CampaignsTable rows={rows} period={period} sort={sort} onSortChange={onSortChange} selectedId={selectedId} onOpen={onOpen} loading={loading} showBrand={showBrand} />

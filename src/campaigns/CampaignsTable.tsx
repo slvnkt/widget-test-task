@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { CaretRight } from '@phosphor-icons/react'
 import { Table, TwoLineCell, type TableColumn, type TableSort } from '@ds/components/Table'
 import { Tooltip, type TooltipRow } from '@ds/components/Tooltip'
@@ -9,6 +10,7 @@ import { rowMetrics, type RowMetrics } from './bar'
 import { ProgressRing } from './ProgressRing'
 import { StatusIcon } from './StatusIcon'
 
+/** Row name prefix; the App finds the row by it to return focus after the drawer closes. */
 export const rowLabel = (c: Campaign) => `Open ${c.name}, ${c.brand}`
 
 const GAP_HINT = 'Delivered minus what the media plan expects by yesterday.'
@@ -22,23 +24,36 @@ export function StatusCell({ c }: { c: Campaign }) {
   )
 }
 
+const round1 = (v: number) => Math.round(v * 10) / 10
 const pct = (v: number, of: number) => Math.round((v / of) * 100)
 
-/** Hover/focus breakdown of the Delivered cell (handoff v8 §3). Live rows add plan, gap and projection; finalized rows show the gap vs goal. */
-function deliveredRows(c: Campaign, r: RowMetrics, period: Period): TooltipRow[] {
+/**
+ * Breakdown of the Delivered cell (handoff v8 §3): the hover tooltip and the row's accessible name.
+ * Live rows add plan, gap and projection; finalized rows show the gap vs goal. Zero rows are hidden, and
+ * Preliminary is derived from the rounded values so Confirmed + Preliminary = Delivered as displayed.
+ */
+export function deliveredRows(c: Campaign, r: RowMetrics, period: Period): TooltipRow[] {
   const { m } = c
   if (!r.hasData) return [{ label: 'Delivered', value: '—' }, period === 'ftd' ? { label: 'Goal', value: fmtM(r.target) } : { label: 'Plan', value: r.target > 0 ? fmtM(r.target) : '—' }]
-  const split = [{ label: 'Confirmed', value: fmtM(r.confirmed) }, { label: 'Preliminary', value: fmtM(r.prelim) }]
-  const gap = r.gap && { label: `Gap vs ${r.gap.vs === 'goal' ? 'goal' : 'plan'}`, value: signedM(r.gap.value) }
+  const shown = round1(r.delivered)
+  const confirmed = Math.min(round1(r.confirmed), shown)
+  const prelim = round1(shown - confirmed)
+  const split: TooltipRow[] = [
+    ...(confirmed > 0 ? [{ label: 'Confirmed', value: fmtM(confirmed) }] : []),
+    ...(prelim > 0 ? [{ label: 'Preliminary', value: fmtM(prelim) }] : []),
+  ]
+  const vs = r.gap?.vs === 'goal' ? 'goal' : 'plan'
+  // Gap is already computed from rounded values (rowMetrics); zero reads like the drawer.
+  const gap = r.gap && { label: `Gap vs ${vs}`, value: r.gap.value === 0 ? `In line with ${vs}` : signedM(r.gap.value) }
   if (period !== 'ftd') {
     return [
-      { label: 'Delivered', value: `${fmtM(r.delivered)} (${pct(r.delivered, r.target)}% of plan)` },
+      { label: 'Delivered', value: `${fmtM(shown)} (${pct(r.delivered, r.target)}% of plan)` },
       ...split,
       { label: `Plan, ${periodLabel(period).toLowerCase()}`, value: fmtM(r.target) },
       ...(gap ? [gap] : []),
     ]
   }
-  const delivered = { label: 'Delivered', value: `${fmtM(r.delivered)} (${pct(r.delivered, r.target)}% of goal)` }
+  const delivered = { label: 'Delivered', value: `${fmtM(shown)} (${pct(r.delivered, r.target)}% of goal)` }
   const goal = { label: 'Goal', value: fmtM(r.target) }
   if (m.phase === 'ended' || m.phase === 'finalized') return [delivered, goal, ...(gap ? [gap] : [])]
   if (m.phase !== 'live') return [delivered, ...split, goal]
@@ -46,23 +61,58 @@ function deliveredRows(c: Campaign, r: RowMetrics, period: Period): TooltipRow[]
   if (r.expected) live.push({ label: 'Plan to date', value: fmtM(r.expected) })
   if (gap) live.push(gap)
   live.push(goal)
-  if (m.status !== 'too-early') live.push({ label: 'Projected', value: `${fmtM(m.projection)} (${Math.round(m.projPct)}%)` })
+  if (m.status !== 'too-early') {
+    const withMakegood = m.status === 'behind' && m.makegoodImps > 0 ? ' with makegood' : ''
+    live.push({ label: 'Projected', value: `${fmtM(m.projection)} (${Math.round(m.projPct)}%)${withMakegood}` })
+  }
   return live
 }
 
-/** Ring + "17.9M of 48.0M"; the ring is not coloured by pace (the Status glyph does that). */
+/** "Open Holiday Linear Q4, Northwind Coffee. Delivered 17.9M (37% of goal), Confirmed 12.6M, …" */
+const rowAriaLabel = (c: Campaign, period: Period) =>
+  `${rowLabel(c)}. ${deliveredRows(c, rowMetrics(c, period), period).map(row => `${row.label} ${row.value}`).join(', ')}`
+
+/** Ring + "17.9M of 48.0M" ("of 6.2M plan" in a period window); the ring is not coloured by pace (the Status glyph does that). */
 function DeliveredCell({ c, r, period }: { c: Campaign; r: RowMetrics; period: Period }) {
-  const of = r.target > 0 ? <span className="delivered-cell__of"> of {fmtM(r.target)}</span> : null
+  const of = r.target > 0 ? <span className="delivered-cell__of"> of {fmtM(r.target)}{period === 'ftd' ? '' : ' plan'}</span> : null
   return (
+    // Hover only: no own tab stop (the row is the focus target and its accessible name carries the breakdown).
     <Tooltip variant="light" title={c.name} rows={deliveredRows(c, r, period)} placement="bottom" anchorClassName="delivered-cell__anchor">
-      {/* Focusable so keyboard users get the breakdown too; Enter here does not open the row (the DS row ignores bubbled keys). */}
-      <span className="delivered-cell" tabIndex={0} aria-label={r.aria}>
+      <span className="delivered-cell">
         <ProgressRing value={r.hasData ? r.delivered : 0} max={r.target} muted={r.muted} />
         <span className="delivered-cell__text">
           {r.hasData ? <span className="delivered-cell__value">{fmtM(r.delivered)}</span> : <span className="delivered-cell__of">—</span>}
           {of}
         </span>
       </span>
+    </Tooltip>
+  )
+}
+
+/**
+ * Gap header: Term look inside the DS sort button (a real Term button would nest buttons). The sort button takes focus,
+ * not this span, so focus is tracked on the document and opens the tooltip (controlled) while the button is focused.
+ */
+function GapHeader() {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    const within = (t: EventTarget | null) => t instanceof Node && !!ref.current && t.contains(ref.current)
+    const onIn = (e: FocusEvent) => setFocused(within(e.target))
+    const onOut = (e: FocusEvent) => { if (!within(e.relatedTarget)) setFocused(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFocused(false) }
+    document.addEventListener('focusin', onIn)
+    document.addEventListener('focusout', onOut)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('focusin', onIn)
+      document.removeEventListener('focusout', onOut)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
+  return (
+    <Tooltip text={GAP_HINT} placement="bottom" open={focused || undefined}>
+      <span ref={ref} className="ot-term">Gap<span className="sr-only">. {GAP_HINT}</span></span>
     </Tooltip>
   )
 }
@@ -101,12 +151,7 @@ export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, o
     { key: 'delivered', header: 'Delivered', width: 200, sortable: true, render: c => <DeliveredCell c={c} r={rowMetrics(c, period)} period={period} /> },
     {
       key: 'gap',
-      // Term look inside the DS sort button (a real Term button would nest buttons): hover shows the tooltip, the sr-only text reads it.
-      header: (
-        <Tooltip text={GAP_HINT} placement="bottom">
-          <span className="ot-term">Gap<span className="sr-only">. {GAP_HINT}</span></span>
-        </Tooltip>
-      ),
+      header: <GapHeader />,
       width: 128,
       align: 'right',
       sortable: true,
@@ -128,7 +173,7 @@ export function CampaignsTable({ rows, period, sort, onSortChange, selectedId, o
       sort={sort}
       onSortChange={onSortChange}
       onRowClick={c => onOpen(c.id)}
-      rowLabel={rowLabel}
+      rowLabel={c => rowAriaLabel(c, period)}
       selectedKeys={selectedId ? [selectedId] : []}
       loading={loading}
       loadingRows={8}

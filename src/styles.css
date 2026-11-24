@@ -39,8 +39,14 @@ p { text-wrap: pretty; }
   display: flex;
   flex-direction: column;
   gap: var(--ot-spacing-gap-lg);
-  padding: var(--ot-spacing-padding-xl) 0 var(--ot-space-3);
+  /* Full-bleed across .main's side padding so scrolled rows never show at its edges. */
+  margin-inline: calc(-1 * var(--ot-space-8));
+  padding: var(--ot-spacing-padding-xl) var(--ot-space-8) var(--ot-space-3);
   background: var(--ot-color-bg-secondary);
+}
+.main {
+  /* Height of .page-top: padding 24 + title 32 + gap 16 + filter bar 32 + padding 12. The table head sticks under it. */
+  --page-top-height: calc(var(--ot-spacing-padding-xl) + var(--ot-typography-heading-lg-line-height) + var(--ot-spacing-gap-lg) + var(--ot-control-height-sm) + var(--ot-space-3));
 }
 .page-top + .campaigns { margin-top: var(--ot-space-3); } /* + 12 padding above = 24 (gap-xl) */
 .filter-bar {
@@ -207,10 +213,27 @@ p { text-wrap: pretty; }
 }
 .campaigns .ot-card__title:focus { outline: none; } /* focus target after the drawer closes, not in the Tab order */
 .campaigns__body { display: flex; flex-direction: column; }
+/* Couldn't refresh: one inline line under the header, cached rows muted but still usable. */
+.campaigns__stale {
+  display: flex;
+  align-items: center;
+  gap: var(--ot-spacing-gap-sm);
+  color: var(--ot-color-text-secondary);
+  font-size: var(--ot-typography-body-sm-font-size);
+  line-height: var(--ot-typography-body-sm-line-height);
+}
+.campaigns--stale .campaigns-table tbody { opacity: var(--ot-opacity-60); }
 
 .campaigns-table .ot-table { table-layout: fixed; }
 /* Fixed columns fit the card (no horizontal scroll), so the wrap can let the Delivered tooltip overflow instead of clipping it. */
 .campaigns-table.ot-table-wrap { overflow: visible; }
+/* Head sticks under the sticky page top (needs the visible overflow above). */
+.campaigns-table thead th {
+  position: sticky;
+  top: var(--page-top-height);
+  z-index: 1;
+  background: var(--ot-color-bg-primary);
+}
 
 /* Delivered: ring 20 → 8 → "17.9M" (label-md, primary) + " of 48.0M" (body-sm, secondary). */
 .delivered-cell__anchor { max-width: 100%; }
@@ -220,10 +243,7 @@ p { text-wrap: pretty; }
   gap: var(--ot-spacing-gap-sm);
   min-width: 0;
   white-space: nowrap;
-  border-radius: var(--ot-shape-radius-sm);
 }
-.delivered-cell:focus { outline: none; }
-.delivered-cell:focus-visible { outline: var(--ot-shape-border-width-md) solid var(--ot-color-border-focus); outline-offset: var(--ot-spacing-padding-2xs); }
 .delivered-cell__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .delivered-cell__value {
   color: var(--ot-color-text-primary);
@@ -272,6 +292,8 @@ p { text-wrap: pretty; }
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* Loading: no skeleton pill in the chevron column (nothing loads there). */
+.campaigns-table tbody td:last-child .ot-skeleton { visibility: hidden; }
 .row-chevron {
   display: inline-flex;
   color: var(--ot-color-text-tertiary);
@@ -328,8 +350,7 @@ p { text-wrap: pretty; }
 @keyframes drawer-out { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
   /* instant, but animationend still fires so the closing drawer unmounts */
-  .drawer, @media (min-width: 1440px) { .drawer { width: 720px; } } /* Drawer md at >=1440 */
-.drawer--closing { animation-duration: 1ms; }
+  .drawer, .drawer--closing { animation-duration: 1ms; }
 }
 .drawer__header {
   display: flex;
@@ -387,7 +408,7 @@ p { text-wrap: pretty; }
 .kpis__status {
   display: inline-flex;
   align-items: center;
-  gap: var(--ot-spacing-gap-sm);
+  gap: 0; /* the text carries its own " · " separator */
 }
 
 .delivery__note {

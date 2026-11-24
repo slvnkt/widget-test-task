@@ -1,6 +1,5 @@
 // Delivered / Gap values for one campaign row (millions). Shared with the drawer's tile 2.
-import { fmtM } from '../data/campaign'
-import { deliveryIn, periodRange, type Period } from '../data/period'
+import { deliveryIn, type Period } from '../data/period'
 import type { Campaign } from '../data/rows'
 
 const round1 = (v: number) => Math.round(v * 10) / 10
@@ -23,11 +22,8 @@ export interface RowMetrics {
   /** Plan to date for the plan marker: Flight to date, live rows only. */
   expected?: number
   muted: boolean
-  /** Delivered ÷ target, rounded; null renders "—". */
-  pct: number | null
   /** null renders "—": paused, just launched, scheduled, cancelled, nothing aired in the window. */
   gap: Gap | null
-  aria: string
 }
 
 export function rowMetrics(c: Campaign, period: Period): RowMetrics {
@@ -46,12 +42,6 @@ export function rowMetrics(c: Campaign, period: Period): RowMetrics {
   }
   const gap = ref && { ...ref, value: round1(round1(d.delivered) - round1(ref.ref)) }
 
-  const range = periodRange(period)
-  let aria: string
-  if (!d.hasData) aria = ftd ? `Not started. ${fmtM(d.target)} goal.` : `Nothing aired in ${range}.`
-  else if (ftd) aria = `${fmtM(d.delivered)} of ${fmtM(d.target)} goal.${expected ? ` Plan to date ${fmtM(expected)}.` : ''}`
-  else aria = `${fmtM(d.delivered)} of ${fmtM(d.target)} plan for ${range}.`
-
   return {
     delivered: d.delivered,
     confirmed: d.confirmed,
@@ -60,8 +50,6 @@ export function rowMetrics(c: Campaign, period: Period): RowMetrics {
     hasData: d.hasData,
     expected,
     muted: m.phase === 'paused',
-    pct: d.hasData ? Math.round((d.delivered / d.target) * 100) : null,
     gap,
-    aria,
   }
 }

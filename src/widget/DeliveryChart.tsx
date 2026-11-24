@@ -55,13 +55,13 @@ function useHatchSize() {
   return size
 }
 
-interface LabelProps { viewBox?: { x: number; y: number }; text: string; anchor?: 'start' | 'middle' | 'end'; dx?: number; dy?: number; tone?: 'primary' | 'secondary'; type?: 'label' | 'body' }
+interface LabelProps { viewBox?: { x: number; y: number; width?: number }; text: string; /** Horizontal ReferenceLine: anchor at the line's right end. */ atEnd?: boolean; anchor?: 'start' | 'middle' | 'end'; dx?: number; dy?: number; tone?: 'primary' | 'secondary'; type?: 'label' | 'body' }
 
 // Direct label anchored at a ReferenceDot / ReferenceLine viewBox (replaces a legend).
-function DirectLabel({ viewBox, text, anchor = 'end', dx = 0, dy = 0, tone = 'secondary', type = 'label' }: LabelProps) {
+function DirectLabel({ viewBox, text, atEnd, anchor = 'end', dx = 0, dy = 0, tone = 'secondary', type = 'label' }: LabelProps) {
   if (!viewBox) return null
   // viewBox origin = dot centre (r 0), start of a horizontal line, top of a vertical line.
-  const x = viewBox.x + dx
+  const x = viewBox.x + (atEnd ? viewBox.width ?? 0 : 0) + dx
   const y = viewBox.y + dy
   return <text x={x} y={y} textAnchor={anchor} className={`chart__label chart__label--${type} chart__label--${tone}`}>{text}</text>
 }
@@ -123,8 +123,22 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
   const yAxis = yTicks(Math.max(m.guarantee * 1.1, m.projHigh, m.delivered))
   // Paused: a "Paused" line at the stop day replaces "Today".
   const vLine = m.phase === 'paused' && m.def.stopDay !== undefined
-    ? { x: m.fmt(m.def.stopDay), text: 'Paused' }
-    : data.some(r => r.label === m.todayLabel) ? { x: m.todayLabel, text: 'Today' } : null
+    ? { x: m.fmt(m.def.stopDay), text: 'Paused', day: m.def.stopDay }
+    : data.some(r => r.label === m.todayLabel) ? { x: m.todayLabel, text: 'Today', day: m.def.today } : null
+  // Today/Paused near the left edge would run into "Goal …": move the goal label to the right end.
+  const goalAtEnd = !!vLine && vLine.day < 10
+  // Forecast label: below the band when the band ends under the goal, else above it; nudged only if within 14px of the goal line.
+  // Plot height = chart height − top margin − default XAxis height (30), to turn millions into pixels.
+  const pxPerM = (HEIGHT - 24 - 30) / yAxis.max
+  let forecast: { y: number; dy: number } | null = null
+  if (last.band) {
+    if (last.band[1] < m.guarantee) forecast = { y: last.band[0], dy: 14 }
+    else {
+      const dy = -8
+      const aboveGoal = (last.band[1] - m.guarantee) * pxPerM - dy // label baseline height above the goal line, px
+      forecast = { y: last.band[1], dy: aboveGoal < 14 ? dy - (14 - aboveGoal) : dy }
+    }
+  }
   const step = hatch.width + hatch.gap
   // End-anchored data labels would clip at the left edge in the first days of a flight: read them to the right instead.
   // Lifted clear of the plan line, which rises under a right-reading label.
@@ -155,7 +169,7 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
         />
 
         <Area dataKey="band" stroke="none" fill="var(--ot-color-bg-tertiary)" fillOpacity={1} activeDot={false} isAnimationActive={false} />
-        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Goal ${+m.guarantee.toFixed(1)}M`} anchor="start" dy={-6} />} />
+        <ReferenceLine y={m.guarantee} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={`Goal ${+m.guarantee.toFixed(1)}M`} anchor={goalAtEnd ? 'end' : 'start'} atEnd={goalAtEnd} dy={-6} />} />
         <Line dataKey="plan" type="linear" stroke="var(--color-plan)" strokeWidth={1.5} strokeDasharray="1 3" strokeLinecap="round" dot={false} activeDot={false} isAnimationActive={false} />
         <Area dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} fill="var(--ot-color-data-track)" fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
         <Area dataKey="prelim" type="monotone" stroke="var(--color-prelim)" strokeWidth={2} strokeDasharray="2 3" strokeLinecap="round" fill={`url(#${hatchId})`} fillOpacity={1} activeDot={{ r: 4 }} isAnimationActive={false} />
@@ -164,16 +178,16 @@ export function DeliveryChart({ m, area, areaLabel }: { m: Model; area?: { x1: n
           <ReferenceLine x={vLine.x} stroke="var(--ot-color-border-secondary)" strokeWidth={1} label={<DirectLabel text={vLine.text} anchor="middle" dy={-8} tone="primary" />} />
         )}
 
-        {planAt && <ReferenceDot x={planAt.label} y={planAt.plan} r={0} label={<DirectLabel text="Plan" anchor="middle" dy={16} />} />}
+        {planAt && m.phase !== 'finalized' && <ReferenceDot x={planAt.label} y={planAt.plan} r={0} label={<DirectLabel text="Plan" anchor="middle" dy={16} />} />}
         {lastConfirmed?.confirmed !== undefined && (
           <ReferenceDot x={lastConfirmed.label} y={lastConfirmed.confirmed} r={0} label={<DirectLabel text={`Confirmed ${fmtM(m.confirmed)}`} dy={confirmedBelow ? 22 : -10} tone="primary" {...inward(lastConfirmed.day)} />} />
         )}
         {lastPrelim?.prelim !== undefined && (
           <ReferenceDot x={lastPrelim.label} y={lastPrelim.prelim} r={0} label={<DirectLabel text={`Preliminary ${m.confirmed > 0 ? signedM(m.prelim) : fmtM(m.prelim)}`} dy={prelimStacked ? -26 : -10} tone="primary" {...inward(lastPrelim.day)} />} />
         )}
-        {/* Right-aligned at flight end, lifted clear of the goal line and the band top (~25px above the goal on Holiday Linear Q4). */}
-        {last.band && (
-          <ReferenceDot x={last.label} y={Math.max(m.guarantee, last.band[1])} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={-12} type="body" />} />
+        {/* Right-aligned at flight end. */}
+        {forecast && (
+          <ReferenceDot x={last.label} y={forecast.y} r={0} label={<DirectLabel text={`Forecast ${m.projLow.toFixed(1)}–${fmtM(m.projHigh)}`} dy={forecast.dy} type="body" />} />
         )}
       </ComposedChart>
     </ChartContainer>

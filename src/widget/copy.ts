@@ -11,6 +11,8 @@ export const HINTS = {
 
 // The model has no refresh timestamp, so freshness time is a copy constant.
 export const UPDATED_AT = 'Updated today, 6:10 AM'
+/** Last good refresh shown in the "Couldn't refresh" state. */
+export const STALE_AT = 'Nov 22, 6:10 AM'
 
 export const SOURCES = {
   logs: { source: 'Network post-logs', use: 'Final, used for billing', what: 'Aired spots matched to Nielsen C3 ratings. Networks send them 5–10 days after air.' },
@@ -40,13 +42,15 @@ export function noteLine(m: Model): ReactNode {
   if (def.lateNetworks) {
     const names = m.networks.filter(n => n.status === 'late').map(n => n.name)
     const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
-    return `No logs from ${list} since ${m.fmt(def.lastLogDay ?? -1)}. Simulmedia ops is following up.`
+    // lastLogDay before day 0 = nothing arrived in this flight: no date to quote.
+    const lastLog = def.lastLogDay ?? -1
+    return lastLog < 0 ? `No logs yet from ${list}. Simulmedia ops is following up.` : `No logs from ${list} since ${m.fmt(lastLog)}. Simulmedia ops is following up.`
   }
   if (m.prelimThrough === null && m.phase === 'live') return `No smart-TV estimates this week, so status uses network logs through ${m.confirmedThroughLabel} only.`
   if (m.status === 'behind' && def.makegood?.from !== undefined) {
     return line(`${m.makegoodSpots} `, makegood('makegood'), ` spots run ${m.fmt(def.makegood.from)} – ${m.fmt(def.makegood.to)} and add ${fmtM(m.makegoodImps)}.`)
   }
-  if (m.status === 'at-risk') return line(`Projected ${fmtM(m.guarantee - m.projection)} short of goal. No `, makegood('makegood'), ' scheduled yet; your account manager will propose one.')
-  if (m.status === 'final-under' && def.makegood) return line(makegood('Makegood'), ` spots for ${fmtM(m.guarantee - m.delivered)} run by ${m.fmt(def.makegood.to)}.`)
+  if (m.status === 'at-risk') return line('No ', makegood('makegood'), ' scheduled yet; your account manager will propose one.')
+  if (m.status === 'final-under' && def.makegood) return line(makegood('Makegood'), ` spots to cover it run by ${m.fmt(def.makegood.to)}.`)
   return null
 }
